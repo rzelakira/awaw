@@ -1404,4 +1404,1063 @@ local function autoPlacePets()
                     Remote("CharacterRE"):FireServer("Focus", cand.uid)
                     task.wait(0.4)
                     prompt.Enabled = true
-  ... (36 KB left)
+                    fireproximityprompt(prompt)
+                    task.wait(0.6)
+                    if petsWorkspace:FindFirstChild(cand.uid) then
+                        ok = true
+                        placed = placed + 1
+                        break
+                    end
+                end
+            end
+        end
+
+        pcall(function()
+            hrp.Anchored = false
+            hrp.CFrame = origCF
+        end)
+        State.PlacingActive = false
+        State.PlaceThread = nil
+        Notify("Auto Place", "Selesai - " .. placed .. " pet dipasang", 4)
+    end)
+end
+
+local function stopAutoPlace()
+    State.PlacingActive = false
+end
+
+local function autoCollectPets()
+    if State.CollectingActive then return end
+    if not fireproximityprompt then
+        Notify("Auto Collect", "Executor tidak support fireproximityprompt", 4)
+        return
+    end
+
+    local petsWorkspace = workspace:FindFirstChild("Pets")
+    if not petsWorkspace then
+        Notify("Auto Collect", "Pets folder not found", 3)
+        return
+    end
+    local ppart = workspace:FindFirstChild("PPart")
+    local prompt = ppart and ppart:FindFirstChildWhichIsA("ProximityPrompt")
+    if not prompt then
+        Notify("Auto Collect", "PPart prompt not found", 3)
+        return
+    end
+    if prompt.ActionText ~= "Recall" then
+        Notify("Auto Collect", "Equip Hammer (hotbar slot 1) dulu", 4)
+        return
+    end
+
+    local filter    = _G.BuildAZooSettings.Collect.Filter
+    local threshold = tonumber(_G.BuildAZooSettings.Collect.Threshold) or 0
+
+    local targets = {}
+    for _, pet in ipairs(petsWorkspace:GetChildren()) do
+        if pet:GetAttribute("UserId") == State.LocalPlayer.UserId then
+            local ps = pet:GetAttribute("ProduceSpeed") or 0
+            local g  = pet:GetAttribute("GridCenterPos")
+            local pass = (filter == "Above" and ps >= threshold) or (filter == "Below" and ps <= threshold)
+            if pass and g then
+                table.insert(targets, { uid = pet.Name, ps = ps, pos = g })
+            end
+        end
+    end
+
+    if #targets == 0 then
+        Notify("Auto Collect", "Tidak ada pet yang cocok filter", 3)
+        return
+    end
+    table.sort(targets, function(a, b) return a.ps < b.ps end)
+
+    State.CollectingActive = true
+    State.CollectThread = task.spawn(function()
+        local char = State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        local origCF = hrp.CFrame
+        local collected = 0
+
+        for _, t in ipairs(targets) do
+            if not State.CollectingActive then break end
+            if petsWorkspace:FindFirstChild(t.uid) then
+                hrp.Anchored = false
+                hrp.CFrame = CFrame.new(t.pos.X, t.pos.Y + 3, t.pos.Z)
+                task.wait(0.35)
+                if prompt.ActionText == "Recall" then
+                    prompt.Enabled = true
+                    fireproximityprompt(prompt)
+                    task.wait(0.55)
+                    if not petsWorkspace:FindFirstChild(t.uid) then
+                        collected = collected + 1
+                    end
+                end
+            end
+        end
+
+        pcall(function()
+            hrp.Anchored = false
+            hrp.CFrame = origCF
+        end)
+        State.CollectingActive = false
+        State.CollectThread = nil
+        Notify("Auto Collect", "Selesai - " .. collected .. " pet di-recall", 4)
+    end)
+end
+
+local function stopAutoCollect()
+    State.CollectingActive = false
+end
+
+task.spawn(function()
+    while task.wait(0.1) do
+        local s = _G.BuildAZooSettings
+        local busyWithOther =
+            s.Main.AutoFishing
+            or s.Player.AutoGift or s.Pets.AutoFeed or s.Pets.AutoFeed2 or s.Pets.AutoFeed3
+
+        if s.Main.AutoClaimCoins and not busyWithOther then
+            AutoClaimCoins()
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        local s = _G.BuildAZooSettings
+
+        if s.Main.AutoFishing then
+            local rootPart = (State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart")
+            if s.Main.FishingPos then
+                rootPart.CFrame   = s.Main.FishingPos
+                rootPart.Anchored = true
+                doFishing()
+            else
+                rootPart.Anchored  = false
+                s.Main.AutoFishing = false
+            end
+
+        else
+            local character = State.LocalPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.Anchored = false
+            end
+        end
+    end
+end)
+
+local Window = Library:CreateWindow({
+    Title       = "WisHUB",
+    Description = "Build a Zoo v2.1.0",
+    SizeUi      = UDim2.fromOffset(600, 480),
+    ["Tab Width"] = 150,
+    Discord     = "discord.gg/wishubx",
+})
+
+local Tabs = {
+    Home     = Window:CreateTab({ Name = "[ Home ]" }),
+    Farm     = Window:CreateTab({ Name = "[ Farm ]" }),
+    Shop     = Window:CreateTab({ Name = "[ Shop ]" }),
+    Eggs     = Window:CreateTab({ Name = "[ Eggs ]" }),
+    Pets     = Window:CreateTab({ Name = "[ Pets ]" }),
+    Events   = Window:CreateTab({ Name = "[ Events ]" }),
+    Player   = Window:CreateTab({ Name = "[ Player ]" }),
+    Redeem   = Window:CreateTab({ Name = "[ Redeem ]" }),
+    Product  = Window:CreateTab({ Name = "[ Game Product ]" }),
+    Settings = Window:CreateTab({ Name = "[ Settings ]" }),
+}
+
+local HomeSection = AddSection(Tabs.Home, "WisHUB - Build a Zoo", true)
+HomeSection:AddParagraph({ Title = "Version", Content = "2.1.0 - Latest" })
+local PetsInfoParagraph = HomeSection:AddParagraph({ Title = "Pets Info", Content = "Loading..." })
+local EggsInfoParagraph = HomeSection:AddParagraph({ Title = "Eggs Info", Content = "Loading..." })
+
+task.spawn(function()
+    while task.wait(2) do
+        PetsInfoParagraph:Set({ Title = "Pets Info", Content = getPetsInfoText() })
+        EggsInfoParagraph:Set({ Title = "Eggs Info", Content = getEggsInfoText() })
+    end
+end)
+
+local FarmSection = AddSection(Tabs.Farm, "Farm", true)
+
+FarmSection:AddDropdown({
+    Title   = "Claim Method",
+    Multi   = false,
+    Options = { "Teleport", "Tween" },
+    Default = _G.BuildAZooSettings.Main.CoinMoveMethod,
+    Callback = function(value)
+        _G.BuildAZooSettings.Main.CoinMoveMethod = value
+        SaveSettings()
+    end,
+})
+
+FarmSection:AddToggle({
+    Title   = "Auto Coins",
+    Default = _G.BuildAZooSettings.Main.AutoClaimCoins,
+    Callback = function(value)
+        _G.BuildAZooSettings.Main.AutoClaimCoins = value
+        SaveSettings()
+    end,
+})
+
+FarmSection:AddToggle({
+    Title   = "Auto Hatch Eggs",
+    Default = _G.BuildAZooSettings.Eggs.AutoHatch,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.AutoHatch = value
+        SaveSettings()
+        if value then
+            task.spawn(function()
+                while _G.BuildAZooSettings.Eggs.AutoHatch do
+                    hatchEggs()
+                    task.wait(2)
+                end
+            end)
+        end
+    end,
+})
+
+FarmSection:AddButton({
+    Title   = "Save Fishing Position",
+    Content = "Mark current location",
+    Callback = function()
+        local rootPart = (State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart")
+        _G.BuildAZooSettings.Main.FishingPos = rootPart.CFrame
+        SaveSettings()
+        Notify("Position Saved", "Fishing location marked!", 2)
+    end,
+})
+
+FarmSection:AddDropdown({
+    Title   = "Fishing Bait",
+    Multi   = false,
+    Options = { "FishingBait1", "FishingBait2", "FishingBait3" },
+    Default = _G.BuildAZooSettings.Main.FishBait,
+    Callback = function(value)
+        _G.BuildAZooSettings.Main.FishBait = value
+        SaveSettings()
+    end,
+})
+
+local AutoFishToggle
+AutoFishToggle = FarmSection:AddToggle({
+    Title   = "Auto Fish",
+    Content = "Save position first",
+    Default = _G.BuildAZooSettings.Main.AutoFishing,
+    Callback = function(value)
+        _G.BuildAZooSettings.Main.AutoFishing = value
+        SaveSettings()
+        if value and not _G.BuildAZooSettings.Main.FishingPos then
+            Notify("Position Required", "Save fishing position first!", 3)
+            AutoFishToggle:Set(false)
+        end
+    end,
+})
+
+FarmSection:AddDropdown({
+    Title   = "Potion Type",
+    Multi   = false,
+    Options = { "Potion_Luck", "Potion_Coin", "Potion_Hatch", "Potion_3in1" },
+    Default = _G.BuildAZooSettings.Main.SelectedPotion,
+    Callback = function(value)
+        _G.BuildAZooSettings.Main.SelectedPotion = value
+        SaveSettings()
+    end,
+})
+
+FarmSection:AddToggle({
+    Title   = "Auto Use Potion",
+    Content = "Every 5 minutes",
+    Default = _G.BuildAZooSettings.Main.AutoPotion,
+    Callback = function(value)
+        _G.BuildAZooSettings.Main.AutoPotion = value
+        SaveSettings()
+        if value then
+            task.spawn(function()
+                while _G.BuildAZooSettings.Main.AutoPotion do
+                    UsePotion()
+                    task.wait(300)
+                end
+            end)
+        end
+    end,
+})
+
+local ShopSection = AddSection(Tabs.Shop, "Shop", true)
+
+ShopSection:AddDropdown({
+    Title   = "Select Fruits",
+    Multi   = true,
+    Options = State.FruitsList,
+    Default = _G.BuildAZooSettings.Shop.SelectedFruits,
+    Callback = function(value)
+        _G.BuildAZooSettings.Shop.SelectedFruits = value or {}
+        SaveSettings()
+    end,
+})
+
+ShopSection:AddToggle({
+    Title   = "Auto Buy Fruits",
+    Default = _G.BuildAZooSettings.Shop.AutoBuyFruit,
+    Callback = function(value)
+        _G.BuildAZooSettings.Shop.AutoBuyFruit = value
+        SaveSettings()
+        if value then
+            task.spawn(function()
+                while _G.BuildAZooSettings.Shop.AutoBuyFruit do
+                    BuyFruits()
+                    task.wait(60)
+                end
+            end)
+        end
+    end,
+})
+
+ShopSection:AddDropdown({
+    Title   = "Destroy Fruit",
+    Multi   = false,
+    Options = State.FruitsList,
+    Default = _G.BuildAZooSettings.Shop.SelectedDestroyFruit,
+    Callback = function(value)
+        _G.BuildAZooSettings.Shop.SelectedDestroyFruit = value
+        SaveSettings()
+    end,
+})
+
+ShopSection:AddToggle({
+    Title   = "Auto Destroy Fruit",
+    Default = _G.BuildAZooSettings.Shop.AutoDestroyFruits,
+    Callback = function(value)
+        _G.BuildAZooSettings.Shop.AutoDestroyFruits = value
+        SaveSettings()
+        if value then
+            task.spawn(function()
+                while _G.BuildAZooSettings.Shop.AutoDestroyFruits and _G.BuildAZooSettings.Shop.SelectedDestroyFruit ~= "" do
+                    DestroyFruit()
+                    task.wait(0.4)
+                end
+            end)
+        end
+    end,
+})
+
+ShopSection:AddDropdown({
+    Title   = "Item Type",
+    Multi   = false,
+    Options = { "All", "Pet", "Egg" },
+    Default = _G.BuildAZooSettings.Shop.SelectedItem,
+    Callback = function(value)
+        _G.BuildAZooSettings.Shop.SelectedItem = value
+        SaveSettings()
+    end,
+})
+
+ShopSection:AddButton({
+    Title   = "Sell Items",
+    Content = "Sell selected type",
+    Callback = function()
+        SellItems()
+        Notify("Items Sold", _G.BuildAZooSettings.Shop.SelectedItem .. " sold successfully", 2)
+    end,
+})
+
+local EggsSection = AddSection(Tabs.Eggs, "Eggs", true)
+
+EggsSection:AddSubSection("Egg Set 1")
+EggsSection:AddDropdown({
+    Title   = "Eggs Set 1",
+    Multi   = true,
+    Options = State.EggsList,
+    Default = _G.BuildAZooSettings.Eggs.SelectedEggs,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.SelectedEggs = value or {}
+        SaveSettings()
+    end,
+})
+EggsSection:AddDropdown({
+    Title   = "Mutations Set 1",
+    Content = "Uncheck None for mutations only",
+    Multi   = true,
+    Options = State.MutationsList,
+    Default = _G.BuildAZooSettings.Eggs.SelectedMutations,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.SelectedMutations = value or {}
+        SaveSettings()
+    end,
+})
+EggsSection:AddToggle({
+    Title   = "Auto Buy Eggs Set 1",
+    Default = _G.BuildAZooSettings.Eggs.AutoBuyEgg,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.AutoBuyEgg = value
+        SaveSettings()
+        if value then
+            findIslandName()
+            task.spawn(function()
+                while _G.BuildAZooSettings.Eggs.AutoBuyEgg do
+                    buyEgg(_G.BuildAZooSettings.Eggs.SelectedEggs, _G.BuildAZooSettings.Eggs.SelectedMutations)
+                    task.wait(1)
+                end
+            end)
+        end
+    end,
+})
+
+EggsSection:AddSubSection("Egg Set 2")
+EggsSection:AddDropdown({
+    Title   = "Eggs Set 2",
+    Multi   = true,
+    Options = State.EggsList,
+    Default = _G.BuildAZooSettings.Eggs.SelectedEggs2,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.SelectedEggs2 = value or {}
+        SaveSettings()
+    end,
+})
+EggsSection:AddDropdown({
+    Title   = "Mutations Set 2",
+    Multi   = true,
+    Options = State.MutationsList,
+    Default = _G.BuildAZooSettings.Eggs.SelectedMutations2,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.SelectedMutations2 = value or {}
+        SaveSettings()
+    end,
+})
+EggsSection:AddToggle({
+    Title   = "Auto Buy Eggs Set 2",
+    Default = _G.BuildAZooSettings.Eggs.AutoBuyEgg2,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.AutoBuyEgg2 = value
+        SaveSettings()
+        if value then
+            findIslandName()
+            task.spawn(function()
+                while _G.BuildAZooSettings.Eggs.AutoBuyEgg2 do
+                    buyEgg(_G.BuildAZooSettings.Eggs.SelectedEggs2, _G.BuildAZooSettings.Eggs.SelectedMutations2)
+                    task.wait(1)
+                end
+            end)
+        end
+    end,
+})
+
+EggsSection:AddSubSection("Sell Eggs")
+EggsSection:AddDropdown({
+    Title   = "Eggs to Sell",
+    Multi   = true,
+    Options = State.EggsList,
+    Default = _G.BuildAZooSettings.Eggs.SelectedSellEggs,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.SelectedSellEggs = value or {}
+        SaveSettings()
+    end,
+})
+EggsSection:AddDropdown({
+    Title   = "Mutations to Sell",
+    Multi   = true,
+    Options = State.MutationsList,
+    Default = _G.BuildAZooSettings.Eggs.SelectedSellMutations,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.SelectedSellMutations = value or {}
+        SaveSettings()
+    end,
+})
+EggsSection:AddButton({
+    Title   = "Sell Filtered Eggs",
+    Content = "Sell by filter",
+    Callback = function() SellEggs() end,
+})
+EggsSection:AddToggle({
+    Title   = "Auto Sell Eggs",
+    Default = _G.BuildAZooSettings.Eggs.AutoSellEgg,
+    Callback = function(value)
+        _G.BuildAZooSettings.Eggs.AutoSellEgg = value
+        SaveSettings()
+        if value then
+            task.spawn(function()
+                while _G.BuildAZooSettings.Eggs.AutoSellEgg do
+                    SellEggs()
+                    task.wait(2)
+                end
+            end)
+        end
+    end,
+})
+
+local PetsSection = AddSection(Tabs.Pets, "Pets", true)
+local BigPetDropdown, BigPetDropdown2, BigPetDropdown3
+
+PetsSection:AddToggle({
+    Title   = "Auto Trade Pet",
+    Content = "Automatically trades when more expensive!",
+    Default = _G.BuildAZooSettings.Pets.AutoTradePet,
+    Callback = function(value)
+        _G.BuildAZooSettings.Pets.AutoTradePet = value
+        SaveSettings()
+        if value then
+            enableAutoTrade()
+            Notify("Auto Trade", "Auto Trade Pet activated!", 3)
+        else
+            disableAutoTrade()
+            Notify("Auto Trade", "Auto Trade Pet deactivated!", 3)
+        end
+    end,
+})
+
+PetsSection:AddButton({
+    Title   = "Refresh Big Pet List",
+    Content = "Reload pet dropdown",
+    Callback = function()
+        if BigPetDropdown  then BigPetDropdown:SetValues(getBigPetList())  end
+        if BigPetDropdown2 then BigPetDropdown2:SetValues(getBigPetList()) end
+        if BigPetDropdown3 then BigPetDropdown3:SetValues(getBigPetList()) end
+        Notify("Refreshed", "Pet list updated", 2)
+    end,
+})
+
+PetsSection:AddSubSection("Big Pet 1")
+BigPetDropdown = PetsSection:AddDropdown({
+    Title   = "Big Pet 1",
+    Multi   = false,
+    Options = getBigPetList(),
+    Default = nil,
+    Callback = function(label)
+        for _, pet in ipairs(State.PetsFolder:GetChildren()) do
+            if pet:GetAttribute("BPV") and (pet:GetAttribute("BPSK") or pet:GetAttribute("T")) == label then
+                _G.BuildAZooSettings.Pets.SelectedPet = pet.Name
+                SaveSettings()
+                break
+            end
+        end
+    end,
+})
+PetsSection:AddDropdown({
+    Title   = "Feed Fruits 1",
+    Multi   = true,
+    Options = State.FruitsList,
+    Default = _G.BuildAZooSettings.Pets.SelectedFeedFruits,
+    Callback = function(value)
+        _G.BuildAZooSettings.Pets.SelectedFeedFruits = value or {}
+        SaveSettings()
+    end,
+})
+local AutoFeedToggle
+AutoFeedToggle = PetsSection:AddToggle({
+    Title   = "Auto Feed Big Pet 1",
+    Default = _G.BuildAZooSettings.Pets.AutoFeed,
+    Callback = function(value)
+        _G.BuildAZooSettings.Pets.AutoFeed = value
+        SaveSettings()
+        if not value then return end
+
+        if #_G.BuildAZooSettings.Pets.SelectedFeedFruits <= 0
+            or _G.BuildAZooSettings.Pets.SelectedPet == ""
+            or not petExists(_G.BuildAZooSettings.Pets.SelectedPet) then
+            Notify("Feed Error", "Select pet and fruits first", 3)
+            AutoFeedToggle:Set(false)
+            return
+        end
+
+        task.spawn(function()
+            while _G.BuildAZooSettings.Pets.AutoFeed do
+                for _, fruitUid in ipairs(_G.BuildAZooSettings.Pets.SelectedFeedFruits) do
+                    Remote("DeployRE"):FireServer({ event = "deploy", uid = fruitUid })
+                    task.wait(0.5)
+                    Remote("CharacterRE"):FireServer("Focus", fruitUid)
+                    task.wait(0.5)
+                    Remote("PetRE"):FireServer("Feed", _G.BuildAZooSettings.Pets.SelectedPet)
+                    task.wait(1)
+                end
+                task.wait(30)
+            end
+        end)
+    end,
+})
+
+PetsSection:AddSubSection("Big Pet 2")
+BigPetDropdown2 = PetsSection:AddDropdown({
+    Title   = "Big Pet 2",
+    Multi   = false,
+    Options = getBigPetList(),
+    Default = nil,
+    Callback = function(label)
+        for _, pet in ipairs(State.PetsFolder:GetChildren()) do
+            if pet:GetAttribute("BPV") and (pet:GetAttribute("BPSK") or pet:GetAttribute("T")) == label then
+                _G.BuildAZooSettings.Pets.SelectedPet2 = pet.Name
+                SaveSettings()
+                break
+            end
+        end
+    end,
+})
+PetsSection:AddDropdown({
+    Title   = "Feed Fruits 2",
+    Multi   = true,
+    Options = State.FruitsList,
+    Default = _G.BuildAZooSettings.Pets.SelectedFeedFruits2,
+    Callback = function(value)
+        _G.BuildAZooSettings.Pets.SelectedFeedFruits2 = value or {}
+        SaveSettings()
+    end,
+})
+local AutoFeed2Toggle
+AutoFeed2Toggle = PetsSection:AddToggle({
+    Title   = "Auto Feed Big Pet 2",
+    Default = _G.BuildAZooSettings.Pets.AutoFeed2,
+    Callback = function(value)
+        _G.BuildAZooSettings.Pets.AutoFeed2 = value
+        SaveSettings()
+        if not value then return end
+
+        if #_G.BuildAZooSettings.Pets.SelectedFeedFruits2 <= 0
+            or _G.BuildAZooSettings.Pets.SelectedPet2 == ""
+            or not petExists(_G.BuildAZooSettings.Pets.SelectedPet2) then
+            Notify("Feed Error", "Select pet and fruits first", 3)
+            AutoFeed2Toggle:Set(false)
+            return
+        end
+
+        task.spawn(function()
+            while _G.BuildAZooSettings.Pets.AutoFeed2 do
+                for _, fruitUid in ipairs(_G.BuildAZooSettings.Pets.SelectedFeedFruits2) do
+                    Remote("DeployRE"):FireServer({ event = "deploy", uid = fruitUid })
+                    task.wait(0.5)
+                    Remote("CharacterRE"):FireServer("Focus", fruitUid)
+                    task.wait(0.5)
+                    Remote("PetRE"):FireServer("Feed", _G.BuildAZooSettings.Pets.SelectedPet2)
+                    task.wait(1)
+                end
+                task.wait(30)
+            end
+        end)
+    end,
+})
+
+PetsSection:AddSubSection("Big Pet 3")
+BigPetDropdown3 = PetsSection:AddDropdown({
+    Title   = "Big Pet 3",
+    Multi   = false,
+    Options = getBigPetList(),
+    Default = nil,
+    Callback = function(label)
+        for _, pet in ipairs(State.PetsFolder:GetChildren()) do
+            if pet:GetAttribute("BPV") and (pet:GetAttribute("BPSK") or pet:GetAttribute("T")) == label then
+                _G.BuildAZooSettings.Pets.SelectedPet3 = pet.Name
+                SaveSettings()
+                break
+            end
+        end
+    end,
+})
+PetsSection:AddDropdown({
+    Title   = "Feed Fruits 3",
+    Multi   = true,
+    Options = State.FruitsList,
+    Default = _G.BuildAZooSettings.Pets.SelectedFeedFruits3,
+    Callback = function(value)
+        _G.BuildAZooSettings.Pets.SelectedFeedFruits3 = value or {}
+        SaveSettings()
+    end,
+})
+local AutoFeed3Toggle
+AutoFeed3Toggle = PetsSection:AddToggle({
+    Title   = "Auto Feed Big Pet 3",
+    Default = _G.BuildAZooSettings.Pets.AutoFeed3,
+    Callback = function(value)
+        _G.BuildAZooSettings.Pets.AutoFeed3 = value
+        SaveSettings()
+        if not value then return end
+
+        if #_G.BuildAZooSettings.Pets.SelectedFeedFruits3 <= 0
+            or _G.BuildAZooSettings.Pets.SelectedPet3 == ""
+            or not petExists(_G.BuildAZooSettings.Pets.SelectedPet3) then
+            Notify("Feed Error", "Select pet and fruits first", 3)
+            AutoFeed3Toggle:Set(false)
+            return
+        end
+
+        task.spawn(function()
+            while _G.BuildAZooSettings.Pets.AutoFeed3 do
+                for _, fruitUid in ipairs(_G.BuildAZooSettings.Pets.SelectedFeedFruits3) do
+                    Remote("DeployRE"):FireServer({ event = "deploy", uid = fruitUid })
+                    task.wait(0.5)
+                    Remote("CharacterRE"):FireServer("Focus", fruitUid)
+                    task.wait(0.5)
+                    Remote("PetRE"):FireServer("Feed", _G.BuildAZooSettings.Pets.SelectedPet3)
+                    task.wait(1)
+                end
+                task.wait(30)
+            end
+        end)
+    end,
+})
+
+PetsSection:AddSubSection("Auto Place Pet")
+PetsSection:AddDropdown({
+    Title   = "Place Filter",
+    Content = "Above = income >= threshold, Below = <= threshold",
+    Multi   = false,
+    Options = { "Above", "Below" },
+    Default = _G.BuildAZooSettings.Place.Filter,
+    Callback = function(value)
+        _G.BuildAZooSettings.Place.Filter = value
+        SaveSettings()
+    end,
+})
+PetsSection:AddInput({
+    Title       = "ProduceSpeed Threshold",
+    Content     = "Income per detik (estimasi base x mutasi)",
+    Default     = tostring(_G.BuildAZooSettings.Place.Threshold),
+    Placeholder = "100000",
+    Callback = function(value)
+        _G.BuildAZooSettings.Place.Threshold = tonumber(value) or 0
+        SaveSettings()
+    end,
+})
+PetsSection:AddButton({
+    Title   = "Place Matching Pets",
+    Content = "Teleport + place pet backpack yang cocok filter",
+    Callback = function()
+        autoPlacePets()
+    end,
+})
+PetsSection:AddButton({
+    Title   = "Stop Placing",
+    Content = "Hentikan proses auto place",
+    Callback = function()
+        stopAutoPlace()
+    end,
+})
+
+PetsSection:AddSubSection("Auto Collect Pet")
+PetsSection:AddDropdown({
+    Title   = "Collect Filter",
+    Content = "Recall pet yang income-nya cocok (Above/Below threshold)",
+    Multi   = false,
+    Options = { "Below", "Above" },
+    Default = _G.BuildAZooSettings.Collect.Filter,
+    Callback = function(value)
+        _G.BuildAZooSettings.Collect.Filter = value
+        SaveSettings()
+    end,
+})
+PetsSection:AddInput({
+    Title       = "ProduceSpeed Threshold",
+    Content     = "Income/detik asli pet yang udah dipasang",
+    Default     = tostring(_G.BuildAZooSettings.Collect.Threshold),
+    Placeholder = "100000",
+    Callback = function(value)
+        _G.BuildAZooSettings.Collect.Threshold = tonumber(value) or 0
+        SaveSettings()
+    end,
+})
+PetsSection:AddButton({
+    Title   = "Collect Matching Pets",
+    Content = "Equip Hammer dulu, lalu teleport + recall pet yang cocok",
+    Callback = function()
+        autoCollectPets()
+    end,
+})
+PetsSection:AddButton({
+    Title   = "Stop Collecting",
+    Content = "Hentikan proses auto collect",
+    Callback = function()
+        stopAutoCollect()
+    end,
+})
+
+local EventsSection = AddSection(Tabs.Events, "Events", true)
+
+EventsSection:AddSubSection("Climb Jump")
+EventsSection:AddToggle({
+    Title   = "Auto Climb",
+    Content = "Auto climb to top + claim milestones",
+    Default = _G.BuildAZooSettings.Climb.AutoClimb,
+    Callback = function(value)
+        _G.BuildAZooSettings.Climb.AutoClimb = value
+        SaveSettings()
+        if value then
+            startAutoClimb()
+        else
+            stopAutoClimb()
+        end
+    end,
+})
+
+EventsSection:AddSubSection("Tasks & Gifts")
+EventsSection:AddToggle({
+    Title   = "Auto Claim Event Tasks",
+    Content = "Halloween/seasonal tasks",
+    Default = _G.BuildAZooSettings.Events.AutoEventTasks,
+    Callback = function(value)
+        _G.BuildAZooSettings.Events.AutoEventTasks = value
+        SaveSettings()
+        if value then
+            task.spawn(function()
+                while _G.BuildAZooSettings.Events.AutoEventTasks do
+                    claimEventTasks()
+                    task.wait(15)
+                end
+            end)
+        end
+    end,
+})
+
+EventsSection:AddToggle({
+    Title   = "Auto Claim Gift",
+    Content = "Every 30 seconds",
+    Default = _G.BuildAZooSettings.Events.AutoDinoOnline,
+    Callback = function(value)
+        _G.BuildAZooSettings.Events.AutoDinoOnline = value
+        SaveSettings()
+        if value then
+            task.spawn(function()
+                while _G.BuildAZooSettings.Events.AutoDinoOnline do
+                    claimOnlinePack()
+                    task.wait(30)
+                end
+            end)
+        end
+    end,
+})
+
+local PlayerSection = AddSection(Tabs.Player, "Player", true)
+local PlayerDropdown
+
+PlayerDropdown = PlayerSection:AddDropdown({
+    Title   = "Select Player",
+    Multi   = false,
+    Options = getOtherPlayers(),
+    Default = nil,
+    Callback = function(value)
+        local name, id = string.match(value or "", "^(.-) %((%d+)%)$")
+        if name and id then
+            _G.BuildAZooSettings.Player.SelectedPlayer   = name
+            _G.BuildAZooSettings.Player.SelectedPlayerId = tonumber(id)
+            SaveSettings()
+        else
+            _G.BuildAZooSettings.Player.SelectedPlayer   = ""
+            _G.BuildAZooSettings.Player.SelectedPlayerId = nil
+        end
+    end,
+})
+
+PlayerSection:AddButton({
+    Title   = "Like Player",
+    Content = "Like selected player",
+    Callback = function()
+        if _G.BuildAZooSettings.Player.SelectedPlayer ~= "" and _G.BuildAZooSettings.Player.SelectedPlayerId then
+            LikePlot()
+            Notify("Plot Liked", _G.BuildAZooSettings.Player.SelectedPlayer .. "'s liked", 2)
+        else
+            Notify("Error", "No player selected", 2)
+        end
+    end,
+})
+
+PlayerSection:AddToggle({
+    Title   = "Auto Like",
+    Content = "Every 30s",
+    Default = _G.BuildAZooSettings.Player.AutoLike,
+    Callback = function(value)
+        _G.BuildAZooSettings.Player.AutoLike = value
+        SaveSettings()
+        if value then
+            task.spawn(function()
+                while _G.BuildAZooSettings.Player.AutoLike do
+                    if _G.BuildAZooSettings.Player.SelectedPlayer ~= "" and _G.BuildAZooSettings.Player.SelectedPlayerId then
+                        LikePlot()
+                    end
+                    task.wait(30)
+                end
+            end)
+        end
+    end,
+})
+
+PlayerSection:AddSubSection("Gems Exchange")
+PlayerSection:AddDropdown({
+    Title   = "Select Item",
+    Multi   = false,
+    Options = {
+        "Lottery Ticket", "Potion 3in1", "Speed Up 1", "Warm Little Rabbit Egg",
+        "Remove Mutate 2", "Pear", "Bloodstone Cycad", "Pineapple", "Chair 1",
+        "Sailfish Egg", "Dragon Fruit", "Unicorn Pro Egg", "Home Board L4",
+        "Home Board L5", "Godzilla Egg", "General Kong Egg (24k)", "Lamp 1",
+        "Fishing Rob 4", "Gold Mango", "General Kong Egg (30k)", "Metro Giraffe Egg",
+        "Deepsea Pearl Fruit", "Colossal Pinecone", "Bite Force Shark Egg",
+        "Hatch Area 1", "Green Storm Egg", "Candy Corn", "Drakespine Egg", "Durian",
+        "Volt Ginkgo", "Pumpkin", "Franken Kiwi", "Dino World", "Weather Snow",
+        "Weather Halloween", "Weather Thanksgiving", "Weather Christmas",
+        "Weather Valentines", "Weather Sweet Home", "[GhostShip] Fish Luck Potion 2",
+        "[GhostShip] Fishing Bait 7 x10", "[GhostShip] Cuttlefish Egg",
+    },
+    Default = _G.BuildAZooSettings.Exchange.SelectedExchangeItem,
+    Callback = function(value)
+        _G.BuildAZooSettings.Exchange.SelectedExchangeItem = value
+        SaveSettings()
+    end,
+})
+PlayerSection:AddToggle({
+    Title   = "Auto Exchange Item",
+    Content = "Every 5 seconds",
+    Default = _G.BuildAZooSettings.Exchange.AutoExchangeItem,
+    Callback = function(value)
+        _G.BuildAZooSettings.Exchange.AutoExchangeItem = value
+        SaveSettings()
+        if value then
+            task.spawn(function()
+                while _G.BuildAZooSettings.Exchange.AutoExchangeItem do
+                    ExchangeItem()
+                    task.wait(5)
+                end
+            end)
+        end
+    end,
+})
+
+local RedeemSection = AddSection(Tabs.Redeem, "Redeem", true)
+RedeemSection:AddButton({
+    Title   = "Redeem All Codes",
+    Content = "Redeem all codes at once",
+    Callback = function() RedeemAllCodes() end,
+})
+
+local ProductSection = AddSection(Tabs.Product, "Game Product", true)
+local gameProducts = {
+    { id = 3341895497, name = "Winged Egg x10",        price = 1799 },
+    { id = 3386565327, name = "Sea Dragon Egg x10",    price = 2399 },
+    { id = 3432069516, name = "Celeste Egg x10",       price = 2399 },
+    { id = 3453368956, name = "Fiery Dragon Egg x10",  price = 2399 },
+    { id = 3471488069, name = "Sirius Egg x10",        price = 1499 },
+    { id = 3486954247, name = "Jingle Pets Gift",      price = 2999 },
+    { id = 3496604240, name = "Shadow King Egg x10",   price = 1699 },
+    { id = 3529659960, name = "Princess Egg x10",      price = 1699 },
+    { id = 3559263546, name = "Flower Whale Egg x10",  price = 1699 },
+    { id = 3545861982, name = "Bumble Bee Egg x10",    price = 1699 },
+    { id = 3573227007, name = "Neon Draconic Egg x10", price = 1699 },
+    { id = 3607894979, name = "Pickle Dragon Egg x10", price = 1699 },
+    { id = 3607314386, name = "Circus Star Pack",      price = 3999 },
+    { id = 3596585795, name = "Slime Dragon Egg x10",  price = 1099 },
+}
+for _, product in ipairs(gameProducts) do
+    ProductSection:AddButton({
+        Title   = product.name,
+        Content = product.price .. " R$",
+        Callback = function()
+            task.spawn(function()
+                local ok, err = pcall(function()
+                    MarketplaceService:PromptProductPurchase(LocalPlayer, product.id)
+                end)
+                if not ok then
+                    Notify("Game Product", "Gagal prompt: " .. tostring(err), 4)
+                end
+            end)
+        end,
+    })
+end
+
+local SettingsSection = AddSection(Tabs.Settings, "Settings", true)
+
+SettingsSection:AddSubSection("Movement")
+SettingsSection:AddInput({
+    Title       = "Walk Speed",
+    Default     = tostring(_G.BuildAZooSettings.Settings.WalkSpeed),
+    Placeholder = "29",
+    Callback = function(value)
+        _G.BuildAZooSettings.Settings.WalkSpeed = tonumber(value) or 29
+        SetSpeed()
+        SaveSettings()
+    end,
+})
+SettingsSection:AddInput({
+    Title       = "Jump Power",
+    Default     = tostring(_G.BuildAZooSettings.Settings.JumpPower),
+    Placeholder = "9",
+    Callback = function(value)
+        _G.BuildAZooSettings.Settings.JumpPower = tonumber(value) or 9
+        SetJump()
+        SaveSettings()
+    end,
+})
+SettingsSection:AddSlider({
+    Title     = "Fly Speed",
+    Min       = 10,
+    Max       = 300,
+    Increment = 1,
+    Default   = _G.BuildAZooSettings.Settings.FlySpeed,
+    Callback = function(value)
+        _G.BuildAZooSettings.Settings.FlySpeed = value
+        SaveSettings()
+    end,
+})
+SettingsSection:AddToggle({
+    Title   = "Fly Mode",
+    Content = "Use WASD to fly",
+    Default = _G.BuildAZooSettings.Settings.FlyMode,
+    Callback = function(value)
+        _G.BuildAZooSettings.Settings.FlyMode = value
+        SaveSettings()
+        if value then
+            enableFly()
+        else
+            if State.FlyConnection then State.FlyConnection:Disconnect() State.FlyConnection = nil end
+            if State.FlyGyro then State.FlyGyro:Destroy() State.FlyGyro = nil end
+            if State.FlyVel then State.FlyVel:Destroy() State.FlyVel = nil end
+            local character = State.LocalPlayer.Character
+            local humanoid  = character and character:FindFirstChildOfClass("Humanoid")
+            if humanoid then humanoid.PlatformStand = false end
+        end
+    end,
+})
+SettingsSection:AddToggle({
+    Title   = "No Clip",
+    Content = "Walk through walls",
+    Default = _G.BuildAZooSettings.Settings.NoClip,
+    Callback = function(value)
+        setNoClip(value)
+        SaveSettings()
+    end,
+})
+SettingsSection:AddToggle({
+    Title   = "Anti AFK",
+    Content = "Prevent AFK kick",
+    Default = _G.BuildAZooSettings.Settings.AntiAFK,
+    Callback = function(value)
+        _G.BuildAZooSettings.Settings.AntiAFK = value
+        SaveSettings()
+    end,
+})
+
+SettingsSection:AddSubSection("Webhook")
+SettingsSection:AddInput({
+    Title       = "Webhook URL",
+    Content     = "Discord webhook for egg logs",
+    Default     = _G.BuildAZooSettings.Settings.WebhookURL,
+    Placeholder = "https://discord.com/api/webhooks/...",
+    Callback = function(value)
+        _G.BuildAZooSettings.Settings.WebhookURL = value
+        SaveSettings()
+    end,
+})
+SettingsSection:AddToggle({
+    Title   = "Enable Webhook",
+    Content = "Log egg purchases",
+    Default = _G.BuildAZooSettings.Settings.EnableWebhook,
+    Callback = function(value)
+        _G.BuildAZooSettings.Settings.EnableWebhook = value
+        SaveSettings()
+    end,
+})
+
+State.Players.PlayerAdded:Connect(function()
+    task.wait(1)
+    if PlayerDropdown then PlayerDropdown:SetValues(getOtherPlayers()) end
+end)
+State.Players.PlayerRemoving:Connect(function()
+    task.wait(1)
+    if PlayerDropdown then PlayerDropdown:SetValues(getOtherPlayers()) end
+end)
+
+Notify("WisHUB", "Loaded - Build a Zoo v2.1.0", 4)
