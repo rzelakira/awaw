@@ -1,0 +1,1407 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/demavieavie/dasasaewe4ada/refs/heads/main/saddasaseaas12455611234"))()
+
+local Players           = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService        = game:GetService("RunService")
+local TweenService      = game:GetService("TweenService")
+local HttpService       = game:GetService("HttpService")
+local VirtualUser       = game:GetService("VirtualUser")
+local TeleportService   = game:GetService("TeleportService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local LocalPlayer       = Players.LocalPlayer
+
+local function Notify(title, content, delay)
+    Library:SetNotification({
+        Title   = title or "WisHUB",
+        Content = content or "",
+        Delay   = delay or 3,
+    })
+end
+
+local function AddSection(tab, title, open)
+    local section = tab:AddSection(title, open)
+    local rawAddDropdown = section.AddDropdown
+    function section:AddDropdown(cfg)
+        if type(cfg) == "table" and cfg.Multi ~= true and type(cfg.Callback) == "function" then
+            local callback = cfg.Callback
+            cfg.Callback = function(value)
+                if type(value) == "table" then
+                    return callback(value[1])
+                end
+                return callback(value)
+            end
+        end
+        return rawAddDropdown(self, cfg)
+    end
+    return section
+end
+
+if not getgenv().WisHUB then
+    getgenv().WisHUB = {}
+end
+local State = getgenv().WisHUB
+
+local ConfigRootFolder = "WisHUB/BuildAZoo"
+local ConfigFilePath   = ConfigRootFolder .. "/" .. "Config_" .. LocalPlayer.Name .. ".json"
+
+local DefaultSettings = {
+    Main = {
+        AutoClaimCoins = false,
+        CoinMoveMethod = "Teleport",
+        AutoFishing    = false,
+        FishBait       = "FishingBait3",
+        FishingPos     = nil,
+        AutoPotion     = false,
+        SelectedPotion = "Potion_Coin",
+    },
+    Shop = {
+        SelectedFruits       = {},
+        AutoBuyFruit         = false,
+        AutoDestroyFruits    = false,
+        SelectedDestroyFruit = "",
+        SelectedItem         = "Pet",
+    },
+    Eggs = {
+        SelectedEggs          = {},
+        SelectedMutations     = {},
+        AutoBuyEgg            = false,
+        SelectedEggs2         = {},
+        SelectedMutations2    = {},
+        AutoBuyEgg2           = false,
+        SelectedSellEggs      = {},
+        SelectedSellMutations = {},
+        AutoSellEgg           = false,
+        AutoHatch             = false,
+    },
+    Pets = {
+        AutoTradePet        = false,
+        SelectedPet         = "",
+        SelectedFeedFruits  = {},
+        AutoFeed            = false,
+        SelectedPet2        = "",
+        SelectedFeedFruits2 = {},
+        AutoFeed2           = false,
+        SelectedPet3        = "",
+        SelectedFeedFruits3 = {},
+        AutoFeed3           = false,
+    },
+    Events = {
+        AutoEventTasks = false,
+        AutoDinoOnline = false,
+    },
+    Climb = {
+        AutoClimb = false,
+    },
+    Place = {
+        Filter    = "Above",
+        Threshold = 100000,
+    },
+    Collect = {
+        Filter    = "Below",
+        Threshold = 100000,
+    },
+    Player = {
+        SelectedPlayer        = "",
+        SelectedPlayerId      = nil,
+        AutoLike              = false,
+        GiftMode              = "Egg",
+        SelectedGiftFruit     = "",
+        SelectedGiftEggs      = {},
+        SelectedGiftMutations = {},
+        AutoGift              = false,
+    },
+    Exchange = {
+        SelectedExchangeItem = "Lottery Ticket",
+        AutoExchangeItem     = false,
+    },
+    Redeem = {
+        SelectedCode = "",
+    },
+    Settings = {
+        WalkSpeed       = 29,
+        JumpPower       = 9,
+        FlySpeed        = 50,
+        FlyMode         = false,
+        NoClip          = false,
+        AntiAFK         = false,
+        WebhookURL      = "",
+        EnableWebhook   = false,
+        AutoRejoin      = false,
+        AutoRejoinDelay = 900,
+    },
+}
+
+_G.BuildAZooSettings = _G.BuildAZooSettings or {}
+
+function LoadSettings()
+    if readfile and (isfile and isfile(ConfigFilePath)) then
+        _G.BuildAZooSettings = HttpService:JSONDecode(readfile(ConfigFilePath))
+    else
+        _G.BuildAZooSettings = DefaultSettings
+    end
+end
+
+function SaveSettings()
+    if writefile and makefolder then
+        if not isfolder("WisHUB") then makefolder("WisHUB") end
+        if not isfolder(ConfigRootFolder) then makefolder(ConfigRootFolder) end
+        writefile(ConfigFilePath, HttpService:JSONEncode(_G.BuildAZooSettings))
+    end
+end
+
+LoadSettings()
+
+for section, defaults in pairs(DefaultSettings) do
+    if type(_G.BuildAZooSettings[section]) ~= "table" then
+        _G.BuildAZooSettings[section] = defaults
+    else
+        for key, value in pairs(defaults) do
+            if _G.BuildAZooSettings[section][key] == nil then
+                _G.BuildAZooSettings[section][key] = value
+            end
+        end
+    end
+end
+
+State.Players           = Players
+State.ReplicatedStorage = ReplicatedStorage
+State.RunService        = RunService
+State.LocalPlayer       = LocalPlayer
+State.PetsFolder        = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Data"):WaitForChild("Pets")
+State.EggsFolder        = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Data"):WaitForChild("Egg")
+State.Remote            = ReplicatedStorage:WaitForChild("Remote"):WaitForChild("CharacterRE")
+State.TweenService      = TweenService
+State.TeleportService   = TeleportService
+State.userId            = LocalPlayer.UserId
+
+local function Remote(name)
+    return ReplicatedStorage:WaitForChild("Remote"):WaitForChild(name)
+end
+
+State.FruitsList = {
+    "Acorn", "Apple", "Banana", "BloodstoneCycad", "Blueberry", "CandyCorn",
+    "Candycane", "Cherry", "ColossalPinecone", "Corn", "Cranberry",
+    "DeepseaPearlFruit", "DragonFruit", "Durian", "FrankenKiwi", "Gingerbread",
+    "GoldMango", "Grape", "Macaron", "MintJelly", "Orange", "Pear", "Pineapple",
+    "Pumpkin", "Strawberry", "VoltGinkgo", "Watermelon", "YogurtIceCream",
+}
+
+State.EggsIDs = {
+    ["Ancient Egg"]           = "AncientEgg",
+    ["Anglerfish Egg"]        = "AnglerfishEgg",
+    ["Arowana Egg"]           = "ArowanaEgg",
+    ["Basic Egg"]             = "BasicEgg",
+    ["Basic Egg B"]           = "BasicEggB",
+    ["Bella Egg"]             = "BellaEgg",
+    ["Bite Force Shark Egg"]  = "BiteForceSharkEgg",
+    ["Bone Dragon Egg"]       = "BoneDragonEgg",
+    ["Bowser Egg"]            = "BowserEgg",
+    ["Bull Demon Egg"]        = "BullDemonEgg",
+    ["Bumble Bee Egg"]        = "BumbleBeeEgg",
+    ["Capy Egg"]              = "CapyEgg",
+    ["Celeste Egg"]           = "CelesteEgg",
+    ["Clownfish Egg"]         = "ClownfishEgg",
+    ["Corn Egg"]              = "CornEgg",
+    ["Cowboy Cow Egg"]        = "CowboyCowEgg",
+    ["Crystal Dragon Egg"]    = "CrystalDragonEgg",
+    ["Cuttlefish Egg"]        = "CuttlefishEgg",
+    ["Cyber Dragon Egg"]      = "CyberDragonEgg",
+    ["Cyber Scorpion Egg"]    = "CyberScorpionEgg",
+    ["Dark Goaty Egg"]        = "DarkGoatyEgg",
+    ["Demon Egg"]             = "DemonEgg",
+    ["Dino Egg"]              = "DinoEgg",
+    ["Divine Deer Egg"]       = "DivineDeerEgg",
+    ["Drakespine Egg"]        = "DrakespineEgg",
+    ["Dumbo Egg"]             = "DumboEgg",
+    ["Eggshell Dinosaur Egg"] = "EggshellDinosaurEgg",
+    ["Epic Egg"]              = "EpicEgg",
+    ["Fennec Fox Egg"]        = "FennecFoxEgg",
+    ["Fiery Dragon Egg"]      = "FieryDragonEgg",
+    ["Fire Phoenix Egg"]      = "FirePhoenixEgg",
+    ["Flower Bat Egg"]        = "FlowerBatEgg",
+    ["Flower Whale Egg"]      = "FlowerWhaleEgg",
+    ["Fly Egg"]               = "FlyEgg",
+    ["Flyingsquirrel Egg"]    = "FlyingsquirrelEgg",
+    ["General Kong Egg"]      = "GeneralKongEgg",
+    ["Ginger Cat Egg"]        = "GingerCatEgg",
+    ["Glasses Rabbit Egg"]    = "GlassesRabbitEgg",
+    ["Godzilla Egg"]          = "GodzillaEgg",
+    ["Green Storm Egg"]       = "GreenStormEgg",
+    ["Halloween Egg"]         = "HalloweenEgg",
+    ["Hyper Egg"]             = "HyperEgg",
+    ["Jelly Dragon Egg"]      = "JellyDragonEgg",
+    ["Jelly Fish Egg"]        = "JellyFishEgg",
+    ["Knights Horse Egg"]     = "KnightsHorseEgg",
+    ["Legend Egg"]            = "LegendEgg",
+    ["Lionfish Egg"]          = "LionfishEgg",
+    ["Little Monster Egg"]    = "LittleMonsterEgg",
+    ["Lobster Egg"]           = "LobsterEgg",
+    ["Magic Rabbit Egg"]      = "MagicRabbitEgg",
+    ["Metro Giraffe Egg"]     = "MetroGiraffeEgg",
+    ["Nano Ram Egg"]          = "NanoRamEgg",
+    ["Narwhal Egg"]           = "NarwhalEgg",
+    ["Ninja Dog Egg"]         = "NinjaDogEgg",
+    ["Oaken Egg"]             = "OakenEgg",
+    ["Ocean Sunfish Egg"]     = "OceanSunfishEgg",
+    ["Octopus Egg"]           = "OctopusEgg",
+    ["Pegasus Egg"]           = "PegasusEgg",
+    ["Pink Unicorn Egg"]      = "PinkUnicornEgg",
+    ["Pirate Crab Egg"]       = "PirateCrabEgg",
+    ["Prismatic Egg"]         = "PrismaticEgg",
+    ["Purple Butterfly Egg"]  = "PurpleButterflyEgg",
+    ["Rare Egg"]              = "RareEgg",
+    ["Red Panda Egg"]         = "RedPandaEgg",
+    ["Rhino Rock Egg"]        = "RhinoRockEgg",
+    ["Rock Chicken Egg"]      = "RockChickenEgg",
+    ["Saber Cub Egg"]         = "SaberCubEgg",
+    ["Sailfish Egg"]          = "SailfishEgg",
+    ["Sea Dragon Egg"]        = "SeaDragonEgg",
+    ["Sea Slug Egg"]          = "SeaSlugEgg",
+    ["Seahorse Egg"]          = "SeahorseEgg",
+    ["Seaweed Egg"]           = "SeaweedEgg",
+    ["Shadow King Egg"]       = "ShadowKingEgg",
+    ["Shark Egg"]             = "SharkEgg",
+    ["Sirius Egg"]            = "SiriusEgg",
+    ["Snowbunny Egg"]         = "SnowbunnyEgg",
+    ["Space Mouse Egg"]       = "SpaceMouseEgg",
+    ["Steampunk Turtle Egg"]  = "SteampunkTurtleEgg",
+    ["Stone Lion Egg"]        = "StoneLionEgg",
+    ["Super Rare Egg"]        = "SuperRareEgg",
+    ["Swan Egg"]              = "SwanEgg",
+    ["Toy Dragon Egg"]        = "ToyDragonEgg",
+    ["Turkey Egg"]            = "TurkeyEgg",
+    ["Ultra Egg"]             = "UltraEgg",
+    ["Unicorn Egg"]           = "UnicornEgg",
+    ["Unicorn Pro Egg"]       = "UnicornProEgg",
+    ["Void Egg"]              = "VoidEgg",
+    ["Warm Little Rabbit Egg"]= "WarmLittleRabbitEgg",
+    ["Wendigo Egg"]           = "WendigoEgg",
+    ["White Tiger Egg"]       = "WhiteTigerEgg",
+    ["Woolly Rhinoceros Egg"] = "WoollyRhinocerosEgg",
+    ["YILAN Dragon Egg"]      = "YILANDragonEgg",
+}
+
+State.EggsList = {
+    "Ancient Egg", "Anglerfish Egg", "Arowana Egg", "Basic Egg", "Basic Egg B",
+    "Bella Egg", "Bite Force Shark Egg", "Bone Dragon Egg", "Bowser Egg",
+    "Bull Demon Egg", "Bumble Bee Egg", "Capy Egg", "Celeste Egg", "Clownfish Egg",
+    "Corn Egg", "Cowboy Cow Egg", "Crystal Dragon Egg", "Cuttlefish Egg",
+    "Cyber Dragon Egg", "Cyber Scorpion Egg", "Dark Goaty Egg", "Demon Egg",
+    "Dino Egg", "Divine Deer Egg", "Drakespine Egg", "Dumbo Egg",
+    "Eggshell Dinosaur Egg", "Epic Egg", "Fennec Fox Egg", "Fiery Dragon Egg",
+    "Fire Phoenix Egg", "Flower Bat Egg", "Flower Whale Egg", "Fly Egg",
+    "Flyingsquirrel Egg", "General Kong Egg", "Ginger Cat Egg", "Glasses Rabbit Egg",
+    "Godzilla Egg", "Green Storm Egg", "Halloween Egg", "Hyper Egg",
+    "Jelly Dragon Egg", "Jelly Fish Egg", "Knights Horse Egg", "Legend Egg",
+    "Lionfish Egg", "Little Monster Egg", "Lobster Egg", "Magic Rabbit Egg",
+    "Metro Giraffe Egg", "Nano Ram Egg", "Narwhal Egg", "Ninja Dog Egg",
+    "Oaken Egg", "Ocean Sunfish Egg", "Octopus Egg", "Pegasus Egg",
+    "Pink Unicorn Egg", "Pirate Crab Egg", "Prismatic Egg", "Purple Butterfly Egg",
+    "Rare Egg", "Red Panda Egg", "Rhino Rock Egg", "Rock Chicken Egg",
+    "Saber Cub Egg", "Sailfish Egg", "Sea Dragon Egg", "Sea Slug Egg",
+    "Seahorse Egg", "Seaweed Egg", "Shadow King Egg", "Shark Egg", "Sirius Egg",
+    "Snowbunny Egg", "Space Mouse Egg", "Steampunk Turtle Egg", "Stone Lion Egg",
+    "Super Rare Egg", "Swan Egg", "Toy Dragon Egg", "Turkey Egg", "Ultra Egg",
+    "Unicorn Egg", "Unicorn Pro Egg", "Void Egg", "Warm Little Rabbit Egg",
+    "Wendigo Egg", "White Tiger Egg", "Woolly Rhinoceros Egg", "YILAN Dragon Egg",
+}
+
+State.MutationsList = {
+    "None", "Golden", "Diamond", "Electirc", "Fire", "Dino", "Snow", "Halloween",
+}
+
+State.RedeemCodes = {
+    "ADQZP3MBW6N", "subtoZRGZeRoGhost", "Nyaa", "druscxlla", "DS5523YSQ3C",
+    "Bunnsterss", "3XKK8Z2WB6G", "N7A68Q82H83", "4XW5RG4CHRY", "60KCCU919",
+}
+
+State.ExchangeItems = {
+    ["Lottery Ticket"]           = "GS_Item_1",
+    ["Potion 3in1"]              = "GS_Item_19",
+    ["Speed Up 1"]               = "GS_Item_28",
+    ["Warm Little Rabbit Egg"]   = "GS_Item_38",
+    ["Remove Mutate 2"]          = "GS_Item_37",
+    ["Pear"]                     = "GS_Item_2",
+    ["Bloodstone Cycad"]         = "GS_Item_3",
+    ["Pineapple"]                = "GS_Item_4",
+    ["Chair 1"]                  = "GS_Item_34",
+    ["Sailfish Egg"]             = "GS_Item_23",
+    ["Dragon Fruit"]             = "GS_Item_5",
+    ["Unicorn Pro Egg"]          = "GS_Item_9",
+    ["Home Board L4"]            = "GS_Item_20",
+    ["Home Board L5"]            = "GS_Item_30",
+    ["Godzilla Egg"]             = "GS_Item_7",
+    ["General Kong Egg (24k)"]   = "GS_Item_8",
+    ["Lamp 1"]                   = "GS_Item_35",
+    ["Fishing Rob 4"]            = "GS_Item_18",
+    ["Gold Mango"]               = "GS_Item_6",
+    ["General Kong Egg (30k)"]   = "GS_Item_21",
+    ["Metro Giraffe Egg"]        = "GS_Item_24",
+    ["Deepsea Pearl Fruit"]      = "GS_Item_10",
+    ["Colossal Pinecone"]        = "GS_Item_11",
+    ["Bite Force Shark Egg"]     = "GS_Item_25",
+    ["Hatch Area 1"]             = "GS_Item_36",
+    ["Green Storm Egg"]          = "GS_Item_26",
+    ["Candy Corn"]               = "GS_Item_12",
+    ["Drakespine Egg"]           = "GS_Item_27",
+    ["Durian"]                   = "GS_Item_13",
+    ["Volt Ginkgo"]              = "GS_Item_14",
+    ["Pumpkin"]                  = "GS_Item_15",
+    ["Franken Kiwi"]             = "GS_Item_22",
+    ["Dino World"]               = "GS_Item_16",
+    ["Weather Snow"]             = "GS_Item_17",
+    ["Weather Halloween"]        = "GS_Item_31",
+    ["Weather Thanksgiving"]     = "GS_Item_32",
+    ["Weather Christmas"]        = "GS_Item_33",
+    ["Weather Valentines"]       = "GS_Item_39",
+    ["Weather Sweet Home"]       = "GS_Item_43",
+    ["[GhostShip] Fish Luck Potion 2"] = "GS_Item_40",
+    ["[GhostShip] Fishing Bait 7 x10"] = "GS_Item_41",
+    ["[GhostShip] Cuttlefish Egg"]     = "GS_Item_42",
+}
+
+State.IslandName           = ""
+State.EggName              = "Unknown"
+State.EggMutate            = "None"
+State.FlyConnection        = nil
+State.FlyGyro              = nil
+State.FlyVel               = nil
+State.NoClipConnection     = nil
+State.ServerId             = ""
+State._ClaimVisited        = {}
+State.AutoTradePetThread   = nil
+State.CurrentTradePetUID   = nil
+State.IsProcessingTrade    = false
+State.TradeEventConnection = nil
+State.AntiAFKConnection    = nil
+State.ClimbActive          = false
+State.ClimbThread          = nil
+State.ClimbHeartbeat       = nil
+State.PlacingActive        = false
+State.PlaceThread          = nil
+State.CollectingActive     = false
+State.CollectThread        = nil
+
+local function tableContains(list, value)
+    if not list then return false end
+    for _, v in ipairs(list) do
+        if v == value then return true end
+    end
+    return false
+end
+
+local function formatNumber(n)
+    if not n then return "0" end
+    local num = tonumber(n) or 0
+    if num >= 1e15 then
+        local v = num / 1e15
+        return v % 1 == 0 and string.format("%.0fQ", v) or string.format("%.2fQ", v)
+    elseif num >= 1e12 then
+        local v = num / 1e12
+        return v % 1 == 0 and string.format("%.0fT", v) or string.format("%.2fT", v)
+    elseif num >= 1e9 then
+        local v = num / 1e9
+        return v % 1 == 0 and string.format("%.0fB", v) or string.format("%.2fB", v)
+    elseif num >= 1e6 then
+        local v = num / 1e6
+        return v % 1 == 0 and string.format("%.0fM", v) or string.format("%.2fM", v)
+    elseif num < 1000 then
+        return tostring(math.floor(num))
+    end
+    local v = num / 1000
+    return v % 1 == 0 and string.format("%.0fK", v) or string.format("%.2fK", v)
+end
+
+local function getPetsInfoText()
+    local grouped = {}
+    for _, pet in ipairs(State.PetsFolder:GetChildren()) do
+        local t = pet:GetAttribute("T") or "Unknown"
+        local m = pet:GetAttribute("M") or "Normal"
+        local key = t .. "_" .. m
+        if not grouped[key] then
+            grouped[key] = { type = t, mutation = m, count = 0 }
+        end
+        grouped[key].count = grouped[key].count + 1
+    end
+
+    if next(grouped) == nil then
+        return "No pets found in inventory"
+    end
+
+    local list = {}
+    for _, entry in pairs(grouped) do
+        table.insert(list, entry)
+    end
+    table.sort(list, function(a, b) return a.type < b.type end)
+
+    local text = ""
+    for _, entry in ipairs(list) do
+        text = text .. string.format("[%s] %s = %d\n", entry.mutation, entry.type, entry.count)
+    end
+    return text
+end
+
+local function getEggsInfoText()
+    local grouped = {}
+    for _, egg in ipairs(State.EggsFolder:GetChildren()) do
+        if #egg:GetChildren() == 0 then
+            local t = egg:GetAttribute("T") or "Unknown"
+            local m = egg:GetAttribute("M") or "Normal"
+            local key = t .. "_" .. m
+            if not grouped[key] then
+                grouped[key] = { type = t, mutation = m, count = 0 }
+            end
+            grouped[key].count = grouped[key].count + 1
+        end
+    end
+
+    if next(grouped) == nil then
+        return "No eggs in inventory"
+    end
+
+    local list = {}
+    for _, entry in pairs(grouped) do
+        table.insert(list, entry)
+    end
+    table.sort(list, function(a, b) return a.type < b.type end)
+
+    local text = ""
+    for _, entry in ipairs(list) do
+        text = text .. string.format("[%s] %s x%d\n", entry.mutation, entry.type, entry.count)
+    end
+    return text
+end
+
+function AutoClaimCoins()
+    if not _G.BuildAZooSettings.Main.AutoClaimCoins then return end
+
+    local petsFolder = workspace:FindFirstChild("Pets")
+    if not petsFolder then return end
+
+    local rootPart = (State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart")
+    local userId = State.LocalPlayer.UserId
+
+    local coins = {}
+    for _, part in ipairs(petsFolder:GetChildren()) do
+        if part:IsA("BasePart") and part:GetAttribute("UserId") == userId and not State._ClaimVisited[part] then
+            local cf = part.CFrame
+            table.insert(coins, {
+                pet  = part,
+                cf   = cf,
+                dist = (rootPart.Position - cf.Position).Magnitude,
+            })
+        end
+    end
+
+    if #coins == 0 then
+        State._ClaimVisited = {}
+        return
+    end
+
+    local pos    = rootPart.Position
+    local lookV  = rootPart.CFrame.LookVector
+    local rightV = rootPart.CFrame.RightVector
+
+    local frontBack, left, right = {}, {}, {}
+    for _, coin in ipairs(coins) do
+        local dir  = (coin.cf.Position - pos).Unit
+        local dotF = lookV:Dot(dir)
+        local dotR = rightV:Dot(dir)
+        if math.abs(dotF) >= 0.5 then
+            table.insert(frontBack, coin)
+        elseif dotR > 0 then
+            table.insert(right, coin)
+        else
+            table.insert(left, coin)
+        end
+    end
+
+    local byDist = function(a, b) return a.dist < b.dist end
+    table.sort(left, byDist)
+    table.sort(right, byDist)
+    table.sort(frontBack, byDist)
+
+    local ordered = {}
+    for _, c in ipairs(left)      do table.insert(ordered, c) end
+    for _, c in ipairs(right)     do table.insert(ordered, c) end
+    for _, c in ipairs(frontBack) do table.insert(ordered, c) end
+
+    local target = ordered[1]
+    local targetPos = target.cf.Position
+    local goalCF = CFrame.new(targetPos.X, rootPart.Position.Y, targetPos.Z)
+
+    if _G.BuildAZooSettings.Main.CoinMoveMethod == "Teleport" then
+        rootPart.CFrame = goalCF
+    elseif _G.BuildAZooSettings.Main.CoinMoveMethod == "Tween" then
+        local tween = State.TweenService:Create(rootPart, TweenInfo.new(0.05, Enum.EasingStyle.Linear), { CFrame = goalCF })
+        tween:Play()
+        tween.Completed:Wait()
+    end
+
+    State._ClaimVisited[target.pet] = true
+end
+
+local function doFishing()
+    local remoteFolder = ReplicatedStorage:FindFirstChild("Remote")
+    if not remoteFolder then return end
+
+    local characterRE = remoteFolder:FindFirstChild("CharacterRE")
+    local fishingRE   = remoteFolder:FindFirstChild("FishingRE")
+    if not (characterRE and fishingRE) then return end
+
+    characterRE:FireServer("Focus", "FishRob")
+    task.wait(0.5)
+    fishingRE:FireServer("Start")
+    task.wait(0.5)
+    fishingRE:FireServer("Throw", {
+        Bait = _G.BuildAZooSettings.Main.FishBait,
+        Pos  = _G.BuildAZooSettings.Main.FishingPos.Position,
+    })
+    task.wait(0.5)
+    fishingRE:FireServer("POUT", { SUC = 1 })
+end
+
+function UsePotion()
+    pcall(function()
+        Remote("ShopRE"):FireServer("UsePotion", _G.BuildAZooSettings.Main.SelectedPotion)
+    end)
+end
+
+local function getEventTaskIds()
+    local tasksFolder = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Data"):WaitForChild("DinoEventTaskData"):WaitForChild("Tasks")
+    local ids = {}
+    for _, task in ipairs(tasksFolder:GetChildren()) do
+        local id = task:GetAttribute("Id")
+        if id then table.insert(ids, id) end
+    end
+    return ids
+end
+
+local function claimEventTasks()
+    for _, id in ipairs(getEventTaskIds()) do
+        Remote("DinoEventRE"):FireServer({ event = "claimreward", id = id })
+        task.wait(0.5)
+    end
+end
+
+local function claimOnlinePack()
+    Remote("DinoEventRE"):FireServer({ event = "onlinepack" })
+end
+
+function LogEgg()
+    if not _G.BuildAZooSettings.Settings.EnableWebhook then return end
+
+    if _G.BuildAZooSettings.Settings.WebhookURL == "" or string.sub(_G.BuildAZooSettings.Settings.WebhookURL, 1, 4) ~= "http" then
+        Notify("Webhook Error", "Invalid URL", 3)
+        return
+    end
+
+    if State.EggName == "Unknown" then return end
+
+    local color =
+        State.EggMutate == "Golden"    and 16766720 or
+        State.EggMutate == "Diamond"   and 11993087 or
+        State.EggMutate == "Fire"      and 16711680 or
+        State.EggMutate == "Snow"      and 16777215 or
+        State.EggMutate == "Halloween" and 16744192 or
+        (State.EggMutate == "Electric" or State.EggMutate == "Electirc") and 16776960 or
+        3447003
+
+    local payload = {
+        embeds = {
+            {
+                title       = " NEW EGG ACQUIRED",
+                description = "**" .. State.LocalPlayer.Name .. "** purchased a new egg!",
+                color       = color,
+                fields = {
+                    { name = " Egg Type", value = "**`" .. tostring(State.EggName) .. "`**", inline = true },
+                    { name = " Mutation", value = "**`" .. tostring(State.EggMutate) .. "`**", inline = true },
+                    { name = " Player",   value = "`" .. State.LocalPlayer.Name .. "`", inline = true },
+                    { name = " User ID",  value = "`" .. tostring(State.LocalPlayer.UserId) .. "`", inline = true },
+                    { name = " Time",     value = "`" .. os.date("%Y-%m-%d %H:%M:%S") .. "`", inline = false },
+                },
+                footer    = { text = "WisHUB - Build a Zoo" },
+                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+            },
+        },
+        username   = "WisHUB Logger",
+        avatar_url = "https://i.postimg.cc/05KMwhzz/20250818-104205.jpg",
+    }
+
+    pcall(function()
+        local body = HttpService:JSONEncode(payload)
+        local httpRequest = (syn and syn.request) or request or (http and http.request) or http_request
+        if httpRequest then
+            httpRequest({
+                Url     = _G.BuildAZooSettings.Settings.WebhookURL,
+                Method  = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body    = body,
+            })
+        end
+    end)
+end
+
+function BuyFruits()
+    for _, fruit in ipairs(_G.BuildAZooSettings.Shop.SelectedFruits) do
+        pcall(function()
+            Remote("FoodStoreRE"):FireServer(fruit)
+        end)
+    end
+end
+
+function DestroyFruit()
+    if _G.BuildAZooSettings.Shop.SelectedDestroyFruit and _G.BuildAZooSettings.Shop.SelectedDestroyFruit ~= "" then
+        Remote("CharacterRE"):FireServer("Focus", _G.BuildAZooSettings.Shop.SelectedDestroyFruit)
+        task.wait(0.2)
+        Remote("DestroyFoodRE"):FireServer("Destroy")
+    end
+end
+
+local function findIslandName()
+    local artFolder = workspace:FindFirstChild("Art")
+    if not artFolder then return end
+
+    for _, island in ipairs(artFolder:GetChildren()) do
+        local ownerId = island:GetAttribute("OccupyingPlayerId")
+        if ownerId and ownerId == State.LocalPlayer.UserId then
+            State.IslandName = island.Name
+            break
+        end
+    end
+end
+
+local function findEggToBuy(eggTypes, mutations)
+    if State.IslandName == "" then return nil end
+
+    local eggsRoot = ReplicatedStorage:FindFirstChild("Eggs")
+    if not eggsRoot then return nil end
+
+    local islandEggs = eggsRoot:FindFirstChild(State.IslandName)
+    if not islandEggs then return nil end
+
+    local wantedTypes = {}
+    for _, name in ipairs(eggTypes) do
+        table.insert(wantedTypes, State.EggsIDs[name] or name)
+    end
+
+    local foundUid, foundType, foundMutation = nil, "Unknown", "None"
+    for _, egg in ipairs(islandEggs:GetChildren()) do
+        local t = egg:GetAttribute("T")
+        local m = egg:GetAttribute("M") or "None"
+        if tableContains(wantedTypes, t) then
+            if not mutations or #mutations == 0 then
+                foundUid, foundType, foundMutation = egg.Name, t, m
+                break
+            elseif tableContains(mutations, m) then
+                foundUid, foundType, foundMutation = egg.Name, t, m
+                break
+            elseif tableContains(mutations, "None") and m == "None" then
+                foundUid, foundType, foundMutation = egg.Name, t, "None"
+                break
+            end
+        end
+    end
+
+    if foundUid then
+        State.EggName   = foundType
+        State.EggMutate = foundMutation
+    end
+    return foundUid
+end
+
+local function buyEgg(eggTypes, mutations)
+    pcall(function()
+        if State.IslandName == "" then
+            findIslandName()
+            if State.IslandName == "" then return end
+        end
+
+        local eggUid = findEggToBuy(eggTypes, mutations)
+        if eggUid then
+            LogEgg()
+            Remote("CharacterRE"):FireServer("BuyEgg", eggUid)
+        end
+    end)
+end
+
+function SellItems()
+    local petRE = Remote("PetRE")
+    if _G.BuildAZooSettings.Shop.SelectedItem and _G.BuildAZooSettings.Shop.SelectedItem ~= "" then
+        pcall(function()
+            if _G.BuildAZooSettings.Shop.SelectedItem ~= "All" then
+                petRE:FireServer("SellAll", "All", _G.BuildAZooSettings.Shop.SelectedItem)
+            else
+                petRE:FireServer("SellAll", "All", "All")
+            end
+        end)
+    end
+end
+
+function SellEggs()
+    local wantedTypes = {}
+    for _, name in ipairs(_G.BuildAZooSettings.Eggs.SelectedSellEggs) do
+        table.insert(wantedTypes, State.EggsIDs[name] or name)
+    end
+
+    local soldCount = 0
+    for _, egg in ipairs(State.EggsFolder:GetChildren()) do
+        local eggType = egg:GetAttribute("T") or ""
+        local eggMut  = egg:GetAttribute("M") or "None"
+
+        local typeMatch = tableContains(wantedTypes, eggType)
+
+        local mutationMatch = false
+        for _, m in ipairs(_G.BuildAZooSettings.Eggs.SelectedSellMutations) do
+            if (m == "None" and eggMut == "None") or (m ~= "None" and eggMut == m) then
+                mutationMatch = true
+                break
+            end
+        end
+
+        if typeMatch and mutationMatch then
+            local ok, err = pcall(function()
+                Remote("PetRE"):FireServer("Sell", egg.Name, true)
+                soldCount = soldCount + 1
+            end)
+            if not ok then
+                print("[ERROR] Failed to sell egg:", err)
+            end
+        end
+    end
+
+    if soldCount > 0 then
+        Notify("Auto Sell Eggs", "Successfully sold " .. soldCount .. " eggs!", 2)
+    end
+    return soldCount
+end
+
+local function petExists(uid)
+    return State.PetsFolder:FindFirstChild(uid) ~= nil
+end
+
+local function getBigPetList()
+    local names = {}
+    for _, pet in ipairs(State.PetsFolder:GetChildren()) do
+        local bpv  = pet:GetAttribute("BPV")
+        local bpsk = pet:GetAttribute("BPSK")
+        local t    = pet:GetAttribute("T")
+        if bpv then
+            local label = bpsk or t
+            if label then table.insert(names, label) end
+        end
+    end
+    return names
+end
+
+local function hatchEggs()
+    local blocksFolder = workspace:FindFirstChild("PlayerBuiltBlocks")
+    if not blocksFolder then return end
+
+    local userId = State.LocalPlayer.UserId
+    local hatchFuncs = {}
+    for _, block in ipairs(blocksFolder:GetChildren()) do
+        if block:GetAttribute("UserId") == userId then
+            local exclamation = block:FindFirstChild("ExclamationMark")
+            local rootPart    = block:FindFirstChild("RootPart")
+            if exclamation and rootPart then
+                local rf = rootPart:FindFirstChild("RF")
+                if rf and rf:IsA("RemoteFunction") then
+                    table.insert(hatchFuncs, rf)
+                end
+            end
+        end
+    end
+
+    for _, rf in ipairs(hatchFuncs) do
+        task.spawn(function()
+            pcall(function()
+                rf:InvokeServer("Hatch")
+            end)
+        end)
+        task.wait(0.05)
+    end
+end
+
+local function getIslandModel()
+    local artFolder = workspace:FindFirstChild("Art")
+    if not artFolder then return nil end
+
+    for _, island in ipairs(artFolder:GetChildren()) do
+        local ownerId = island:GetAttribute("OccupyingPlayerId")
+        if ownerId and ownerId == State.LocalPlayer.UserId then
+            return island
+        end
+    end
+    return nil
+end
+
+local function getDeployedPetNames()
+    local result = {}
+    local petsFolder = workspace:FindFirstChild("Pets")
+    if petsFolder then
+        for _, pet in ipairs(petsFolder:GetChildren()) do
+            if pet:IsA("BasePart") and pet:GetAttribute("UserId") == State.LocalPlayer.UserId then
+                table.insert(result, pet.Name)
+            end
+        end
+    end
+    return result
+end
+
+local function getUndeployedPets(deployedNames)
+    local result = {}
+    for _, pet in ipairs(State.PetsFolder:GetChildren()) do
+        if not tableContains(deployedNames, pet.Name) then
+            table.insert(result, pet.Name)
+        end
+    end
+    return result
+end
+
+local function getRandomUndeployedPet()
+    local undeployed = getUndeployedPets(getDeployedPetNames())
+    if #undeployed <= 0 then return nil end
+    return undeployed[math.random(1, #undeployed)]
+end
+
+local function teleportToTradeZone()
+    local island = getIslandModel()
+    if not island then
+        Notify("Auto Trade Error", "Island not found!", 3)
+        return false
+    end
+
+    local env = island:FindFirstChild("ENV")
+    if env then env = env:FindFirstChild("TradeZone") end
+    if not env then
+        Notify("Auto Trade Error", "TradeZone not found!", 3)
+        return false
+    end
+
+    local touch = env:FindFirstChild("Touch")
+    if not touch then
+        Notify("Auto Trade Error", "Touch part not found!", 3)
+        return false
+    end
+
+    local rootPart = (State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart")
+    rootPart.CFrame = touch.CFrame + Vector3.new(0, 3, 0)
+
+    local startTime = tick()
+    local timeout   = 5
+    while (rootPart.Position - touch.Position).Magnitude > 10 and tick() - startTime < timeout do
+        task.wait(0.1)
+    end
+
+    return (rootPart.Position - touch.Position).Magnitude <= 10
+end
+
+local function requestTrade()
+    if State.CurrentTradePetUID and State.PetsFolder:FindFirstChild(State.CurrentTradePetUID) then
+        return pcall(function()
+            Remote("TradeRE"):FireServer({ event = "reqtrade" })
+        end)
+    end
+
+    State.CurrentTradePetUID = getRandomUndeployedPet()
+    if not State.CurrentTradePetUID then
+        Notify("Auto Trade", "No undeployed pets available!", 3)
+        return false
+    end
+
+    local deployOk = pcall(function()
+        Remote("DeployRE"):FireServer({ event = "deploy", uid = State.CurrentTradePetUID })
+    end)
+    if not deployOk then
+        State.CurrentTradePetUID = nil
+        return false
+    end
+
+    task.wait(0.5)
+    local focusOk = pcall(function()
+        Remote("CharacterRE"):FireServer("Focus", State.CurrentTradePetUID)
+    end)
+    if not focusOk then
+        State.CurrentTradePetUID = nil
+        return false
+    end
+
+    task.wait(0.5)
+    return pcall(function()
+        Remote("TradeRE"):FireServer({ event = "reqtrade" })
+    end)
+end
+
+local function onTradeEvent(data)
+    if not (_G.BuildAZooSettings.Pets.AutoTradePet and State.IsProcessingTrade) then return end
+    if not (data.event == "reqtrade" and data.data) then return end
+
+    local bargainRate = data.data.BargainRate or 0
+    task.wait(1)
+
+    if bargainRate < 0.2 then
+        pcall(function()
+            Remote("TradeRE"):FireServer({ event = "accept" })
+        end)
+        Notify("Auto Trade", string.format("Trade Accepted! Rate: %.3f", bargainRate), 3)
+        State.IsProcessingTrade = true
+        task.wait(2)
+        State.IsProcessingTrade = false
+    else
+        pcall(function()
+            Remote("TradeRE"):FireServer({ event = "decline" })
+        end)
+        Notify("Auto Trade", string.format("Trade Declined! Rate: %.3f", bargainRate), 3)
+        State.IsProcessingTrade = false
+    end
+end
+
+local function enableAutoTrade()
+    if State.AutoTradePetThread then
+        _G.BuildAZooSettings.Pets.AutoTradePet = false
+        task.wait(0.5)
+        pcall(task.cancel, State.AutoTradePetThread)
+        State.AutoTradePetThread = nil
+    end
+
+    State.CurrentTradePetUID = nil
+    State.IsProcessingTrade  = false
+
+    if not State.TradeEventConnection then
+        State.TradeEventConnection = Remote("TradeRE").OnClientEvent:Connect(onTradeEvent)
+    end
+
+    State.AutoTradePetThread = task.spawn(function()
+        while _G.BuildAZooSettings.Pets.AutoTradePet do
+            if State.IsProcessingTrade then
+                task.wait(0.5)
+            elseif teleportToTradeZone() then
+                task.wait(1)
+                State.IsProcessingTrade = true
+
+                if not requestTrade() then
+                    Notify("Auto Trade", "Trading process failed!", 3)
+                    State.IsProcessingTrade = false
+                end
+
+                local startTime = tick()
+                local timeout   = 5
+                while _G.BuildAZooSettings.Pets.AutoTradePet and (tick() - startTime < timeout and not State.IsProcessingTrade) do
+                    task.wait(0.1)
+                end
+            else
+                Notify("Auto Trade", "Failed to teleport to trade zone!", 3)
+                task.wait(5)
+            end
+        end
+    end)
+end
+
+local function disableAutoTrade()
+    if State.AutoTradePetThread then
+        task.cancel(State.AutoTradePetThread)
+        State.AutoTradePetThread = nil
+    end
+    if State.TradeEventConnection then
+        State.TradeEventConnection:Disconnect()
+        State.TradeEventConnection = nil
+    end
+    State.CurrentTradePetUID = nil
+    State.IsProcessingTrade  = false
+end
+
+function ExchangeItem()
+    local selected = _G.BuildAZooSettings.Exchange.SelectedExchangeItem
+    if selected and State.ExchangeItems[selected] then
+        Remote("TradeRE"):FireServer({ event = "exchange", id = State.ExchangeItems[selected] })
+    end
+end
+
+function RedeemCode(code)
+    Remote("RedemptionCodeRE"):FireServer({ event = "usecode", code = code })
+end
+
+function RedeemAllCodes()
+    if #State.RedeemCodes <= 0 then
+        Notify("No Codes Available", "There are no valid redeem codes right now", 5)
+        return
+    end
+
+    for _, code in ipairs(State.RedeemCodes) do
+        if code and code ~= "" then
+            RedeemCode(code)
+            task.wait(1)
+        end
+    end
+
+    Notify("Redeem All Completed", "All codes have been redeemed!", 5)
+end
+
+local function getOtherPlayers()
+    local result = {}
+    for _, player in ipairs(State.Players:GetPlayers()) do
+        if player ~= State.LocalPlayer then
+            table.insert(result, player.Name .. " (" .. player.UserId .. ")")
+        end
+    end
+    return result
+end
+
+function LikePlot()
+    Remote("CharacterRE"):FireServer("GiveLike", _G.BuildAZooSettings.Player.SelectedPlayerId)
+end
+
+function SetSpeed()
+    local humanoid = (State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()):FindFirstChildOfClass("Humanoid")
+    local speed = humanoid and tonumber(_G.BuildAZooSettings.Settings.WalkSpeed)
+    if speed then
+        humanoid.WalkSpeed = math.clamp(speed, 1, 250)
+    end
+end
+
+function SetJump()
+    local humanoid = (State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()):FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.UseJumpPower = false
+        local jump = tonumber(_G.BuildAZooSettings.Settings.JumpPower)
+        if jump then
+            humanoid.JumpHeight = math.clamp(jump, 1, 250)
+        end
+    end
+end
+
+local function enableFly()
+    local character = State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()
+    local rootPart  = character:WaitForChild("HumanoidRootPart")
+    local humanoid  = character:WaitForChild("Humanoid")
+
+    humanoid.PlatformStand = true
+
+    State.FlyGyro = Instance.new("BodyGyro")
+    State.FlyGyro.P         = 90000
+    State.FlyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    State.FlyGyro.CFrame    = rootPart.CFrame
+    State.FlyGyro.Parent    = rootPart
+
+    State.FlyVel = Instance.new("BodyVelocity")
+    State.FlyVel.Velocity = Vector3.new(0, 0, 0)
+    State.FlyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    State.FlyVel.Parent   = rootPart
+
+    State.FlyConnection = State.RunService.Heartbeat:Connect(function()
+        if _G.BuildAZooSettings.Settings.FlyMode then
+            local moveDir = humanoid.MoveDirection
+            local camCF   = workspace.CurrentCamera.CFrame
+            local lookV   = camCF.LookVector
+            local rightV  = camCF.RightVector
+            local velocity = (lookV * moveDir:Dot(lookV) + rightV * moveDir:Dot(rightV)) * _G.BuildAZooSettings.Settings.FlySpeed
+            State.FlyVel.Velocity = velocity
+            State.FlyGyro.CFrame  = CFrame.new(rootPart.Position, rootPart.Position + Vector3.new(lookV.X, 0, lookV.Z))
+        end
+    end)
+end
+
+local function setNoClip(enabled)
+    _G.BuildAZooSettings.Settings.NoClip = enabled
+
+    if enabled then
+        State.NoClipConnection = State.RunService.Stepped:Connect(function()
+            if State.LocalPlayer.Character then
+                for _, part in pairs(State.LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    else
+        if State.NoClipConnection then
+            State.NoClipConnection:Disconnect()
+            State.NoClipConnection = nil
+        end
+        if State.LocalPlayer.Character then
+            for _, part in pairs(State.LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end
+
+State.LocalPlayer.Idled:Connect(function()
+    if _G.BuildAZooSettings.Settings.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
+local function runAutoClimb()
+    local laneX, laneZ     = -170.048569, 166.167160
+    local centerX, centerZ = -170.768677, 172.301239
+    local targetHeight     = 11000
+    local speed            = 2600
+    local holdAfterClaim   = 3.0
+
+    local climbRemote = Remote("ClimbSyncRE")
+    local timeValue   = ReplicatedStorage:WaitForChild("Time")
+
+    local area = workspace:WaitForChild("ClimbJumpArea")
+    local farm = area:WaitForChild("Farm")
+    local baseY   = farm.Position.Y + farm.Size.Y * 0.5
+    local targetY = baseY + targetHeight + 5
+
+    local milestones = {
+        { id = "L1", h = 600 },
+        { id = "L2", h = 2000 },
+        { id = "L3", h = 5000 },
+        { id = "L4", h = 11000 },
+    }
+
+    local function salt()
+        local s = timeValue:GetAttribute("s") or 0
+        return bit32.bxor(State.LocalPlayer.UserId, s, timeValue.Value)
+    end
+
+    local function cfAt(y)
+        return CFrame.lookAt(Vector3.new(laneX, y, laneZ), Vector3.new(centerX, y, centerZ))
+    end
+
+    local character = State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()
+    local humanoid  = character:WaitForChild("Humanoid")
+    local rootPart  = character:WaitForChild("HumanoidRootPart")
+
+    local oldAutoRotate     = humanoid.AutoRotate
+    local oldPlatformStand  = humanoid.PlatformStand
+
+    State.LocalPlayer:SetAttribute("AutoClimb", false)
+    humanoid.AutoRotate    = false
+    humanoid.PlatformStand = true
+    rootPart.Anchored = true
+    rootPart.AssemblyLinearVelocity  = Vector3.zero
+    rootPart.AssemblyAngularVelocity = Vector3.zero
+
+    local reached = {}
+    local function fireReachAndClaim(heightNow)
+        for _, m in ipairs(milestones) do
+            if not reached[m.id] and heightNow >= m.h then
+                reached[m.id] = true
+                climbRemote:FireServer("CJReach", m.id, salt())
+                task.wait(0.1)
+                for _ = 1, 3 do
+                    climbRemote:FireServer("CJClaim", m.id, salt())
+                    task.wait(0.08)
+                end
+            end
+        end
+    end
+
+    local function claimAll()
+        for _, m in ipairs(milestones) do
+            climbRemote:FireServer("CJReach", m.id, salt())
+            task.wait(0.05)
+            for _ = 1, 2 do
+                climbRemote:FireServer("CJClaim", m.id, salt())
+                task.wait(0.05)
+            end
+        end
+    end
+
+    local y = math.max(rootPart.Position.Y, baseY + 22)
+    State.ClimbHeartbeat = RunService.Heartbeat:Connect(function()
+        if not State.ClimbActive or not rootPart.Parent then return end
+        pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Climbing) end)
+        State.LocalPlayer:SetAttribute("Climbing", true)
+        State.LocalPlayer:SetAttribute("IsInJumpClimb", true)
+        State.LocalPlayer:SetAttribute("ClimbHudHide", true)
+        State.LocalPlayer:SetAttribute("ClimbDeepY", math.max(0, y - baseY))
+        rootPart.CFrame = cfAt(y)
+        rootPart.AssemblyLinearVelocity  = Vector3.zero
+        rootPart.AssemblyAngularVelocity = Vector3.zero
+    end)
+
+    while State.ClimbActive and y < targetY and rootPart.Parent do
+        local dt = RunService.Heartbeat:Wait()
+        y = math.min(targetY, y + speed * dt)
+        fireReachAndClaim(y - baseY)
+    end
+
+    if State.ClimbActive then
+        task.wait(0.25)
+        claimAll()
+        task.wait(holdAfterClaim)
+        claimAll()
+    end
+
+    State.ClimbActive = false
+    if State.ClimbHeartbeat then
+        State.ClimbHeartbeat:Disconnect()
+        State.ClimbHeartbeat = nil
+    end
+
+    State.LocalPlayer:SetAttribute("ClimbHudHide", false)
+    humanoid.AutoRotate    = oldAutoRotate
+    humanoid.PlatformStand = oldPlatformStand
+    rootPart.AssemblyLinearVelocity  = Vector3.zero
+    rootPart.AssemblyAngularVelocity = Vector3.zero
+    rootPart.Anchored = false
+    pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+end
+
+local function startAutoClimb()
+    if State.ClimbActive then return end
+    State.ClimbActive = true
+    State.ClimbThread = task.spawn(function()
+        local ok, err = pcall(runAutoClimb)
+        State.ClimbActive = false
+        if State.ClimbHeartbeat then
+            State.ClimbHeartbeat:Disconnect()
+            State.ClimbHeartbeat = nil
+        end
+        if not ok then
+            Notify("Auto Climb", "Error: " .. tostring(err), 4)
+        end
+    end)
+end
+
+local function stopAutoClimb()
+    State.ClimbActive = false
+end
+
+local ResPetCfg = (function()
+    local ok, r = pcall(function() return require(ReplicatedStorage.Config.ResPet) end)
+    return ok and r or {}
+end)()
+local ResMutateCfg = (function()
+    local ok, r = pcall(function() return require(ReplicatedStorage.Config.ResMutate) end)
+    return ok and r or {}
+end)()
+
+local function estimateProduce(t, m, m2)
+    local baseData = ResPetCfg[t]
+    local base = (baseData and baseData.ProduceRate) or 0
+    local mult = 0
+    if m and m ~= "None" and ResMutateCfg[m] then
+        mult = mult + (ResMutateCfg[m].ProduceRate or 0)
+    end
+    if m2 and ResMutateCfg[m2] then
+        mult = mult + (ResMutateCfg[m2].ProduceRate or 0)
+    end
+    if mult == 0 then mult = 1 end
+    return base * mult
+end
+
+local function isOceanPet(t)
+    local d = ResPetCfg[t]
+    return d ~= nil and (d.Category == "Ocean" or d.Sheet == "Ocean")
+end
+
+local function getEmptyCells(isOcean)
+    local cells = {}
+    local islandName = State.LocalPlayer:GetAttribute("AssignedIslandName")
+    local island = islandName and workspace:FindFirstChild("Art") and workspace.Art:FindFirstChild(islandName)
+    if not island then return cells end
+
+    local occupied = {}
+    local petsWorkspace = workspace:FindFirstChild("Pets")
+    if petsWorkspace then
+        for _, pt in ipairs(petsWorkspace:GetChildren()) do
+            if pt:GetAttribute("UserId") == State.LocalPlayer.UserId then
+                local g = pt:GetAttribute("GridCenterPos")
+                if g then
+                    occupied[math.floor(g.X + 0.5) .. "," .. math.floor(g.Z + 0.5)] = true
+                end
+            end
+        end
+    end
+
+    for _, d in ipairs(island:GetDescendants()) do
+        if d:IsA("BasePart") then
+            local name = d.Name
+            local isWaterTile = string.find(name, "WaterFarm_split") ~= nil
+            local isLandTile  = (not isWaterTile) and string.find(name, "Farm_split") ~= nil
+            local match = (isOcean and isWaterTile) or ((not isOcean) and isLandTile)
+            if match then
+                local pos = d.Position
+                local key = math.floor(pos.X + 0.5) .. "," .. math.floor(pos.Z + 0.5)
+                if not occupied[key] then
+                    table.insert(cells, { x = pos.X, y = pos.Y + d.Size.Y * 0.5, z = pos.Z })
+                end
+            end
+        end
+    end
+    return cells
+end
+
+local function autoPlacePets()
+    if State.PlacingActive then return end
+    if not fireproximityprompt then
+        Notify("Auto Place", "Executor tidak support fireproximityprompt", 4)
+        return
+    end
+
+    local petsWorkspace = workspace:FindFirstChild("Pets")
+    if not petsWorkspace then
+        Notify("Auto Place", "Pets folder not found", 3)
+        return
+    end
+    local ppart = workspace:FindFirstChild("PPart")
+    local prompt = ppart and ppart:FindFirstChildWhichIsA("ProximityPrompt")
+    if not prompt then
+        Notify("Auto Place", "PPart prompt not found", 3)
+        return
+    end
+
+    local filter    = _G.BuildAZooSettings.Place.Filter
+    local threshold = tonumber(_G.BuildAZooSettings.Place.Threshold) or 0
+
+    local candidates = {}
+    for _, pet in ipairs(State.PetsFolder:GetChildren()) do
+        if not petsWorkspace:FindFirstChild(pet.Name) and not pet:GetAttribute("BPV") then
+            local t = pet:GetAttribute("T")
+            local est = estimateProduce(t, pet:GetAttribute("M"), pet:GetAttribute("M2"))
+            local pass = (filter == "Above" and est >= threshold) or (filter == "Below" and est <= threshold)
+            if pass then
+                table.insert(candidates, { uid = pet.Name, est = est, ocean = isOceanPet(t) })
+            end
+        end
+    end
+
+    if #candidates == 0 then
+        Notify("Auto Place", "Tidak ada pet yang cocok filter", 3)
+        return
+    end
+    table.sort(candidates, function(a, b) return a.est > b.est end)
+
+    State.PlacingActive = true
+    State.PlaceThread = task.spawn(function()
+        local char = State.LocalPlayer.Character or State.LocalPlayer.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        local origCF = hrp.CFrame
+        local placed = 0
+
+        for _, cand in ipairs(candidates) do
+            if not State.PlacingActive then break end
+            if petsWorkspace:FindFirstChild(cand.uid) then
+                placed = placed + 1
+            else
+                local cells = getEmptyCells(cand.ocean)
+                if #cells == 0 then
+                    Notify("Auto Place", (cand.ocean and "Petak air" or "Petak darat") .. " penuh, lanjut pet lain", 3)
+                end
+
+                local ok = false
+                local attempts = math.min(#cells, 6)
+                for i = 1, attempts do
+                    if not State.PlacingActive then break end
+                    local cell = cells[i]
+                    hrp.Anchored = false
+                    hrp.CFrame = CFrame.new(cell.x, cell.y + 3, cell.z)
+                    task.wait(0.35)
+                    Remote("DeployRE"):FireServer({ event = "deploy", uid = cand.uid })
+                    task.wait(0.35)
+                    Remote("CharacterRE"):FireServer("Focus", cand.uid)
+                    task.wait(0.4)
+                    prompt.Enabled = true
+  ... (36 KB left)
