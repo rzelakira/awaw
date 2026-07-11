@@ -2342,6 +2342,7 @@ local gameProducts = {
     { id = 3573227007, name = "Neon Draconic Egg x10", price = 1699 },
     { id = 3607894979, name = "Pickle Dragon Egg x10", price = 1699 },
     { id = 3607314386, name = "Circus Star Pack",      price = 3999 },
+    { id = 3588284989, name = "Barkbound Egg",         price = 3999 },
     { id = 3596585795, name = "Slime Dragon Egg x10",  price = 1099 },
 }
 for _, product in ipairs(gameProducts) do
