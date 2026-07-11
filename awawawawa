@@ -1551,7 +1551,7 @@ end)
 local Window = Library:CreateWindow({
     Title       = "WisHUB",
     Description = "Build a Zoo v2.1.0",
-    SizeUi      = UDim2.fromOffset(600, 480),
+    SizeUi      = UDim2.fromOffset(600, 300),
     ["Tab Width"] = 150,
     Discord     = "discord.gg/wishubx",
 })
