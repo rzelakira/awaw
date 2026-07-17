@@ -183,7 +183,7 @@ State.FruitsList = {
     "Candycane", "Cherry", "ColossalPinecone", "Corn", "Cranberry",
     "DeepseaPearlFruit", "DragonFruit", "Durian", "FrankenKiwi", "Gingerbread",
     "GoldMango", "Grape", "Macaron", "MintJelly", "Orange", "Pear", "Pineapple",
-    "Pumpkin", "Strawberry", "VoltGinkgo", "Watermelon", "YogurtIceCream",
+    "Pumpkin", "Strawberry", "VoltGinkgo", "Watermelon", "YogurtIceCream", "Popsicle",
 }
 
 State.EggsIDs = {
