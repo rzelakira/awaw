@@ -183,7 +183,7 @@ State.FruitsList = {
     "Candycane", "Cherry", "ColossalPinecone", "Corn", "Cranberry",
     "DeepseaPearlFruit", "DragonFruit", "Durian", "FrankenKiwi", "Gingerbread",
     "GoldMango", "Grape", "Macaron", "MintJelly", "Orange", "Pear", "Pineapple",
-    "Pumpkin", "Strawberry", "VoltGinkgo", "Watermelon", "YogurtIceCream", "Popsicle",
+    "Pumpkin", "Strawberry", "VoltGinkgo", "Watermelon", "YogurtIceCream",
 }
 
 State.EggsIDs = {
@@ -1130,11 +1130,12 @@ local function setNoClip(enabled)
     end
 end
 
-State.LocalPlayer.Idled:Connect(function()
-    if _G.BuildAZooSettings.Settings.AntiAFK then
+State.AntiAFKConnection = State.LocalPlayer.Idled:Connect(function()
+    if not _G.BuildAZooSettings.Settings.AntiAFK then return end
+    pcall(function()
         VirtualUser:CaptureController()
         VirtualUser:ClickButton2(Vector2.new())
-    end
+    end)
 end)
 
 local function runAutoClimb()
@@ -1551,7 +1552,7 @@ end)
 local Window = Library:CreateWindow({
     Title       = "WisHUB",
     Description = "Build a Zoo v2.1.0",
-    SizeUi      = UDim2.fromOffset(600, 300),
+    SizeUi      = UDim2.fromOffset(600, 480),
     ["Tab Width"] = 150,
     Discord     = "discord.gg/wishubx",
 })
@@ -2328,21 +2329,23 @@ RedeemSection:AddButton({
 })
 
 local ProductSection = AddSection(Tabs.Product, "Game Product", true)
+-- key = ResProducts key dipakai game buat beli via server (ProductBuyRF).
+-- Server yang fire prompt -> tetap render walau client PromptProductPurchase diblok executor.
 local gameProducts = {
-    { id = 3341895497, name = "Winged Egg x10",        price = 1799 },
-    { id = 3386565327, name = "Sea Dragon Egg x10",    price = 2399 },
-    { id = 3432069516, name = "Celeste Egg x10",       price = 2399 },
-    { id = 3453368956, name = "Fiery Dragon Egg x10",  price = 2399 },
-    { id = 3471488069, name = "Sirius Egg x10",        price = 1499 },
-    { id = 3486954247, name = "Jingle Pets Gift",      price = 2999 },
-    { id = 3496604240, name = "Shadow King Egg x10",   price = 1699 },
-    { id = 3529659960, name = "Princess Egg x10",      price = 1699 },
-    { id = 3559263546, name = "Flower Whale Egg x10",  price = 1699 },
-    { id = 3545861982, name = "Bumble Bee Egg x10",    price = 1699 },
-    { id = 3573227007, name = "Neon Draconic Egg x10", price = 1699 },
-    { id = 3607894979, name = "Pickle Dragon Egg x10", price = 1699 },
-    { id = 3607314386, name = "Circus Star Pack",      price = 3999 },
-    { id = 3596585795, name = "Slime Dragon Egg x10",  price = 1099 },
+    { id = 3341895497, key = "FlyEgg_x10",          name = "Winged Egg x10",        price = 1799 },
+    { id = 3386565327, key = "SeaDragonEgg_x10",    name = "Sea Dragon Egg x10",    price = 2399 },
+    { id = 3432069516, key = "CelesteEgg_x10",      name = "Celeste Egg x10",       price = 2399 },
+    { id = 3453368956, key = "FieryDragonEgg_x10",  name = "Fiery Dragon Egg x10",  price = 2399 },
+    { id = 3471488069, key = "SiriusEgg_x10",       name = "Sirius Egg x10",        price = 1499 },
+    { id = 3486954247, key = "AllMutatePack1",      name = "Jingle Pets Gift",      price = 2999 },
+    { id = 3496604240, key = "ShadowKingEgg_x10",   name = "Shadow King Egg x10",   price = 1699 },
+    { id = 3529659960, key = "PinkUnicornEgg_x10",  name = "Princess Egg x10",      price = 1699 },
+    { id = 3559263546, key = "FlowerWhaleEgg_x10",  name = "Flower Whale Egg x10",  price = 1699 },
+    { id = 3545861982, key = "BumbleBeeEgg_x10",    name = "Bumble Bee Egg x10",    price = 1699 },
+    { id = 3573227007, key = "CyberDragonEgg_x10",  name = "Neon Draconic Egg x10", price = 1699 },
+    { id = 3607894979, key = "ToyDragonEgg_x10",    name = "Pickle Dragon Egg x10", price = 1699 },
+    { id = 3607314386, key = "AllMutatePack2",      name = "Circus Star Pack",      price = 3999 },
+    { id = 3596585795, key = "SlimeOnlinePack_x10", name = "Slime Dragon Egg x10",  price = 1099 },
 }
 for _, product in ipairs(gameProducts) do
     ProductSection:AddButton({
@@ -2350,11 +2353,18 @@ for _, product in ipairs(gameProducts) do
         Content = product.price .. " R$",
         Callback = function()
             task.spawn(function()
+                -- Beli lewat server (cara game aslinya). Server yang manggil
+                -- PromptProductPurchase -> prompt tetap muncul walau prompt
+                -- client-side keblok executor.
                 local ok, err = pcall(function()
-                    MarketplaceService:PromptProductPurchase(LocalPlayer, product.id)
+                    Remote("ProductBuyRF"):InvokeServer(product.key)
                 end)
                 if not ok then
-                    Notify("Game Product", "Gagal prompt: " .. tostring(err), 4)
+                    -- fallback: prompt client biasa
+                    pcall(function()
+                        MarketplaceService:PromptProductPurchase(LocalPlayer, product.id)
+                    end)
+                    Notify("Game Product", "Server buy error: " .. tostring(err), 4)
                 end
             end)
         end,
