@@ -1552,7 +1552,7 @@ end)
 local Window = Library:CreateWindow({
     Title       = "WisHUB",
     Description = "Build a Zoo v2.1.0",
-    SizeUi      = UDim2.fromOffset(600, 480),
+    SizeUi      = UDim2.fromOffset(600, 380),
     ["Tab Width"] = 150,
     Discord     = "discord.gg/wishubx",
 })
@@ -2346,6 +2346,7 @@ local gameProducts = {
     { id = 3607894979, key = "ToyDragonEgg_x10",    name = "Pickle Dragon Egg x10", price = 1699 },
     { id = 3607314386, key = "AllMutatePack2",      name = "Circus Star Pack",      price = 3999 },
     { id = 3596585795, key = "SlimeOnlinePack_x10", name = "Slime Dragon Egg x10",  price = 1099 },
+    { id = 3602607901, key = "FirePhoenixEgg_x10",  name = "Fire Phoenix Egg x10",  price = 1699 },
 }
 for _, product in ipairs(gameProducts) do
     ProductSection:AddButton({
