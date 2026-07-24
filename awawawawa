@@ -1139,7 +1139,7 @@ State.AntiAFKConnection = State.LocalPlayer.Idled:Connect(function()
 end)
 
 local function runAutoClimb()
-    local laneX, laneZ     = -110.048569, 166.167160
+    local laneX, laneZ     = -110.048569, 162.167160
     local centerX, centerZ = -170.768677, 172.301239
     local targetHeight     = 11000
     local speed            = 2600
