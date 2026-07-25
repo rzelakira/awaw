@@ -2347,7 +2347,7 @@ local gameProducts = {
     { id = 3607314386, key = "AllMutatePack2",      name = "Circus Star Pack",      price = 3999 },
     { id = 3596585795, key = "SlimeOnlinePack_x10", name = "Slime Dragon Egg x10",  price = 1099 },
     { id = 3602607901, key = "FirePhoenixEgg_x10",  name = "Fire Phoenix Egg x10",  price = 1699 },
-    { id = 3471487791, key = "SiriusEgg_x1",        name = "Sirius Egg x1",         price = 1099 },
+    { id = 3471487791, key = "SiriusEgg_x1",        name = "Sirius Egg x1",         price = 169  },
 }
 for _, product in ipairs(gameProducts) do
     ProductSection:AddButton({
