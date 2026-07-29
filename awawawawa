@@ -2334,6 +2334,7 @@ local ProductSection = AddSection(Tabs.Product, "Game Product", true)
 local gameProducts = {
     { id = 3341895497, key = "FlyEgg_x10",          name = "Winged Egg x10",        price = 1799 },
     { id = 3386565327, key = "SeaDragonEgg_x10",    name = "Sea Dragon Egg x10",    price = 2399 },
+    { id = 3432069157, key = "CelesteEgg_x1",       name = "Celeste Egg x1",        price = 279  },
     { id = 3432069516, key = "CelesteEgg_x10",      name = "Celeste Egg x10",       price = 2399 },
     { id = 3453368956, key = "FieryDragonEgg_x10",  name = "Fiery Dragon Egg x10",  price = 2399 },
     { id = 3471488069, key = "SiriusEgg_x10",       name = "Sirius Egg x10",        price = 1499 },
@@ -2342,6 +2343,7 @@ local gameProducts = {
     { id = 3529659960, key = "PinkUnicornEgg_x10",  name = "Princess Egg x10",      price = 1699 },
     { id = 3559263546, key = "FlowerWhaleEgg_x10",  name = "Flower Whale Egg x10",  price = 1699 },
     { id = 3545861982, key = "BumbleBeeEgg_x10",    name = "Bumble Bee Egg x10",    price = 1699 },
+    { id = 3471487791, key = "CyberDragonEgg_x1",   name = "Neon Draconic Egg x1",  price = 199  },
     { id = 3573227007, key = "CyberDragonEgg_x10",  name = "Neon Draconic Egg x10", price = 1699 },
     { id = 3607894979, key = "ToyDragonEgg_x10",    name = "Pickle Dragon Egg x10", price = 1699 },
     { id = 3607314386, key = "AllMutatePack2",      name = "Circus Star Pack",      price = 3999 },
