@@ -2333,8 +2333,7 @@ local ProductSection = AddSection(Tabs.Product, "Game Product", true)
 -- Server yang fire prompt -> tetap render walau client PromptProductPurchase diblok executor.
 local gameProducts = {
     { id = 3341895497, key = "FlyEgg_x10",          name = "Winged Egg x10",        price = 1799 },
-    { id = 3386565327, key = "SeaDragonEgg_x10",    name = "Sea Dragon Egg x10",    price = 2399 },
-    { id = 3432069157, key = "CelesteEgg_x1",       name = "Celeste Egg x1",        price = 279  },
+    { id = 3432069157, key = "CelesteEgg_x1",        name = "Celeste Egg x1",       price = 279 },
     { id = 3432069516, key = "CelesteEgg_x10",      name = "Celeste Egg x10",       price = 2399 },
     { id = 3453368956, key = "FieryDragonEgg_x10",  name = "Fiery Dragon Egg x10",  price = 2399 },
     { id = 3471488069, key = "SiriusEgg_x10",       name = "Sirius Egg x10",        price = 1499 },
